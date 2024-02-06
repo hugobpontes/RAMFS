@@ -140,8 +140,6 @@ TEST(TestFsLoad, FileSystemHasAcceptableSize) {
     CHECK(MyFileSystem1 == MyFileSystem2);
   }
 
-  // improve shell script to a failed stage aborts script
-
   // add checks for nullptrs
 
   // revamp RAM_SIZE
