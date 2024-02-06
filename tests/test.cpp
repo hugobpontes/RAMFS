@@ -7,7 +7,7 @@
 #include "RAMFS.h"
 
 //helper code
-static std::array<char,RAM_SIZE> zerobuffer{};
+static std::array<char,RamAccess::k_RamSize> zerobuffer{};
 #define ACCEPTABLE_FS_SIZE 100
 class RamAccessFile : public RamAccess {
   public:
@@ -26,7 +26,7 @@ class RamAccessFile : public RamAccess {
     file.seekp(0, std::ios::beg);
 
     // Write data to the file
-    file.write(zerobuffer.data(), RAM_SIZE);
+    file.write(zerobuffer.data(), RamAccess::k_RamSize);
 
     file.close();
   }
@@ -109,7 +109,7 @@ TEST_GROUP(TestFsLoad){
 };
 
 TEST(TestFsLoad, FileSystemHasAcceptableSize) {
-  RAMFS MyFileSystem1(RAM_SIZE, &RamFileEmulator);
+  RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
 
   size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
 
@@ -118,7 +118,7 @@ TEST(TestFsLoad, FileSystemHasAcceptableSize) {
 }
 
   TEST(TestFsLoad, FileSystemIsStoredInRam) {
-    RAMFS MyFileSystem1(RAM_SIZE, &RamFileEmulator);
+    RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
 
     size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
 
@@ -135,14 +135,14 @@ TEST(TestFsLoad, FileSystemHasAcceptableSize) {
   }
 
   TEST(TestFsLoad, FileSystemIsLoaded) {
-    RAMFS MyFileSystem1(RAM_SIZE, &RamFileEmulator);
-    RAMFS MyFileSystem2(RAM_SIZE - 100,&RamFileEmulator);  // using a different size would mean different internal parameters if fs wasnt loaded
+    RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
+    RAMFS MyFileSystem2(RamAccess::k_RamSize - 100,&RamFileEmulator);  // using a different size would mean different internal parameters if fs wasnt loaded
     CHECK(MyFileSystem1 == MyFileSystem2);
   }
 
   // add checks for nullptrs
 
-  // revamp RAM_SIZE
+  // revamp RamAccess::k_RamSize
 
   // CONST CORRECTNESS!!! (also for methods)
 
