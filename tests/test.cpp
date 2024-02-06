@@ -6,16 +6,36 @@
 
 #include "RAMFS.h"
 
-
+//helper code
 static std::array<char,RAM_SIZE> zerobuffer{};
+#define ACCEPTABLE_FS_SIZE 100
 class RamAccessFile : public RamAccess {
   public:
   RamAccessFile() = delete;
   RamAccessFile(const std::string& filename) : filename(filename) {}
 
-  virtual void RamWrite(void* pData, size_t size, size_t address) override {
+  void RamClear(){
     std::fstream file(filename,
                       std::ios::in | std::ios::out | std::ios::binary);
+    if (!file) {
+      std::cerr << "Cannot open file for clear." << std::endl;
+      return;
+    }
+
+    // Move the file pointer to the specified address
+    file.seekp(0, std::ios::beg);
+
+    // Write data to the file
+    file.write(zerobuffer.data(), RAM_SIZE);
+
+    file.close();
+  }
+  virtual void RamWrite(void* pData, size_t size, size_t address) override {
+    if (!CheckRamAccessParameters(pData, size, address)) {
+      std::cerr << "Bad write access parameters" << std::endl;
+      return;
+    }
+    std::fstream file(filename, std::ios::in | std::ios::out | std::ios::binary);
     if (!file) {
       std::cerr << "Cannot open file for writing." << std::endl;
       return;
@@ -31,6 +51,10 @@ class RamAccessFile : public RamAccess {
   }
 
   virtual void RamRead(void* pData, size_t size, size_t address) override {
+    if (!CheckRamAccessParameters(pData, size, address)) {
+      std::cerr << "Bad read access parameters" << std::endl;
+      return;
+    }
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
       std::cerr << "Cannot open file for reading." << std::endl;
@@ -53,6 +77,7 @@ RamAccessFile RamFileEmulator("tests/RAMEmulator.bin");
 
 TEST_GROUP(TestRamAccessFile){
   void setup(){
+    RamFileEmulator.RamClear();
   }
   void teardown(){
   }
@@ -73,3 +98,58 @@ TEST(TestRamAccessFile, MultiByteWriteAndRead) {
   RamFileEmulator.RamRead(r_vals, sizeof(w_vals), 1);
   MEMCMP_EQUAL(w_vals,r_vals,sizeof(w_vals));
 }
+
+TEST_GROUP(TestFsLoad){
+  void setup(){
+    RamFileEmulator.RamClear();
+  }
+  void teardown() {
+
+  }
+};
+
+TEST(TestFsLoad, FileSystemHasAcceptableSize) {
+  RAMFS MyFileSystem1(RAM_SIZE, &RamFileEmulator);
+
+  size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
+
+  std::cout << "FS Size: " << RawFileSystemSize << std::endl;
+  CHECK(RawFileSystemSize < ACCEPTABLE_FS_SIZE);
+}
+
+  TEST(TestFsLoad, FileSystemIsStoredInRam) {
+    RAMFS MyFileSystem1(RAM_SIZE, &RamFileEmulator);
+
+    size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
+
+    uint8_t* RamFileSystemParams = new uint8_t[RawFileSystemSize];
+    uint8_t* GetterFileSystemParams = new uint8_t[RawFileSystemSize];
+    RamFileEmulator.RamRead(RamFileSystemParams, RawFileSystemSize, 0);
+    MyFileSystem1.GetRawFileSystem(GetterFileSystemParams, RawFileSystemSize);
+
+    MEMCMP_EQUAL(RamFileSystemParams, GetterFileSystemParams,
+                 RawFileSystemSize);
+
+    delete[] RamFileSystemParams;
+    delete[] GetterFileSystemParams;
+  }
+
+  TEST(TestFsLoad, FileSystemIsLoaded) {
+    RAMFS MyFileSystem1(RAM_SIZE, &RamFileEmulator);
+    RAMFS MyFileSystem2(RAM_SIZE - 100,&RamFileEmulator);  // using a different size would mean different internal parameters if fs wasnt loaded
+    CHECK(MyFileSystem1 == MyFileSystem2);
+  }
+
+  // improve shell script to a failed stage aborts script
+
+  // add checks for nullptrs
+
+  // revamp RAM_SIZE
+
+  // CONST CORRECTNESS!!! (also for methods)
+
+  // test case where size provided is incompatible with ram size too little or
+  // too large also test initialization test non standard arguments test with
+  // corrupted load data test gettting file system into small array
+
+  //separate test files, separate src files
