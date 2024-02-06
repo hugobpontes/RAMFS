@@ -8,7 +8,7 @@
 
 //helper code
 static std::array<char,RamAccess::k_RamSize> zerobuffer{};
-#define ACCEPTABLE_FS_SIZE 100
+constexpr int k_acceptableFsSize = 100;
 class RamAccessFile : public RamAccess {
   public:
   RamAccessFile() = delete;
@@ -113,8 +113,9 @@ TEST(TestFsLoad, FileSystemHasAcceptableSize) {
 
   size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
 
-  std::cout << "FS Size: " << RawFileSystemSize << std::endl;
-  CHECK(RawFileSystemSize < ACCEPTABLE_FS_SIZE);
+  std::string ErrorString = "File System Size over limit("+std::to_string(k_acceptableFsSize)+"): " + std::to_string(RawFileSystemSize);
+
+  CHECK_TEXT(RawFileSystemSize < k_acceptableFsSize, ErrorString.data());
 }
 
   TEST(TestFsLoad, FileSystemIsStoredInRam) {
@@ -137,6 +138,7 @@ TEST(TestFsLoad, FileSystemHasAcceptableSize) {
   TEST(TestFsLoad, FileSystemIsLoaded) {
     RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
     RAMFS MyFileSystem2(RamAccess::k_RamSize - 100,&RamFileEmulator);  // using a different size would mean different internal parameters if fs wasnt loaded
+    //CHECK_EQUAL(MyFileSystem1,MyFileSystem2);
     CHECK(MyFileSystem1 == MyFileSystem2);
   }
 
