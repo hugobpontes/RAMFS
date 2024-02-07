@@ -8,10 +8,10 @@ project(
 
 find_package(CppUTest REQUIRED)
 
-set(SrcInc RAMFS/)
-set(RunnerFile tests/runner.cpp)
-set(SrcFiles RAMFS/RAMFS.cpp )
-set(TestFiles tests/test.cpp)
+set(SrcInc RAMFS/ unit_testing/fakes)
+set(RunnerFile unit_testing/runner.cpp)
+set(SrcFiles RAMFS/RamAccess.cpp )
+set(TestFiles unit_testing/test_groups/test.cpp )
 
 add_executable(RAMFS_tests ${RunnerFile} ${TestFiles} ${SrcFiles})
 
