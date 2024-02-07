@@ -136,50 +136,89 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   }
 
   TEST(TestFsInstantiation, FileSystemIsLoadedWhenEqualSize) {
-    RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
-    MyFileSystem1._TempFileMangler_();
-    RAMFS MyFileSystem2(RamAccess::k_RamSize,&RamFileEmulator);
+    RAMFS NotLoadedFileSystem(RamAccess::k_RamSize, &RamFileEmulator);
+    // edit original fs so we can test that the second is loaded from it
+    NotLoadedFileSystem._TempFileEdit_(); 
+    RAMFS LoadedFileSystem(RamAccess::k_RamSize,&RamFileEmulator);
 
-    CHECK(MyFileSystem1.IsInitialized());
-    CHECK(MyFileSystem2.IsInitialized());
-    CHECK(!MyFileSystem1.WasLoaded());
-    CHECK(MyFileSystem2.WasLoaded());
-    CHECK(MyFileSystem1 == MyFileSystem2);
+    CHECK(NotLoadedFileSystem.IsInitialized());
+    CHECK(LoadedFileSystem.IsInitialized());
+    CHECK(!NotLoadedFileSystem.WasLoaded());
+    CHECK(LoadedFileSystem.WasLoaded());
+    CHECK(NotLoadedFileSystem == LoadedFileSystem);
   }
 
     TEST(TestFsInstantiation, FileSystemIsNotLoadedWhenDifferentSize) {
-    RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
-    RAMFS MyFileSystem2(RamAccess::k_RamSize-100,&RamFileEmulator);
+      RAMFS NotLoadedFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
+      RAMFS NotLoadedFileSystem2(RamAccess::k_RamSize - 100, &RamFileEmulator);
 
-    CHECK(MyFileSystem1.IsInitialized());
-    CHECK(MyFileSystem2.IsInitialized());
-    CHECK(!MyFileSystem1.WasLoaded());
-    CHECK(!MyFileSystem2.WasLoaded());
-    CHECK(!(MyFileSystem1 == MyFileSystem2));
+      CHECK(NotLoadedFileSystem1.IsInitialized());
+      CHECK(NotLoadedFileSystem2.IsInitialized());
+      CHECK(!NotLoadedFileSystem1.WasLoaded());
+      CHECK(!NotLoadedFileSystem2.WasLoaded());
+      CHECK(!(NotLoadedFileSystem1 == NotLoadedFileSystem2));
+  }
+
+  TEST(TestFsInstantiation, FileSystemIsNotLoadedWhenBrokenOrInexistent) {
+    RAMFS NotLoadedFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
+    // edit original fs so we can test that the second is not loaded from it
+    NotLoadedFileSystem1._TempFileEdit_();
+    //clear ram so file system can't be loaded from it
+    RamFileEmulator.RamClear();
+    RAMFS NotLoadedFileSystem2(RamAccess::k_RamSize, &RamFileEmulator);
+
+    CHECK(NotLoadedFileSystem1.IsInitialized());
+    CHECK(NotLoadedFileSystem2.IsInitialized());
+    CHECK(!NotLoadedFileSystem1.WasLoaded());
+    CHECK(!NotLoadedFileSystem2.WasLoaded());
+    CHECK(!(NotLoadedFileSystem1 == NotLoadedFileSystem2));
   }
 
   TEST(TestFsInstantiation, NullPtrInstantionDoesntCrash) {
-    RAMFS MyFileSystem1(RamAccess::k_RamSize, nullptr);
+    RAMFS NullPtrFileSystem(RamAccess::k_RamSize, nullptr);
 
     // check that initialization was skipped due to bad param
-    CHECK (!MyFileSystem1.IsInitialized()); 
-
+    CHECK(!NullPtrFileSystem.IsInitialized());
   }
 
-  TEST(TestFsInstantiation, InstatiationWithTooLargeSizeIsIgnored) {
-    RAMFS MyFileSystem1(RamAccess::k_RamSize+10,&RamFileEmulator);
+  TEST(TestFsInstantiation, InstatiationWithTooLargeRamSizeIsIgnored) {
+    RAMFS TooLargeRamSizeFileSystem(RamAccess::k_RamSize+10,&RamFileEmulator);
 
     // check that initialization was skipped due to bad param
-    CHECK(!MyFileSystem1.IsInitialized());
+    CHECK(!TooLargeRamSizeFileSystem.IsInitialized());
   }
 
+  TEST(TestFsInstantiation, InstatiationWithTooSmallRam) {
+    // test case where ram size is too small to accomodate fs
 
-  //test instantiate with bad size Over ram size (from accessor) 
+    RAMFS UsedToGetSize1(RamAccess::k_RamSize, &RamFileEmulator);
+    RAMFS<20, 20> UsedToGetSize2(RamAccess::k_RamSize, &RamFileEmulator);
 
-  // also test initialization test non standard arguments 
-  //test case where file system does not fit in RAM
+    size_t DefaultFsSize = UsedToGetSize1.GetRawFileSystemSize();
+    size_t CustomFsSize = UsedToGetSize2.GetRawFileSystemSize();
+
+    RAMFS TooSmallFileSystem1(DefaultFsSize-1, &RamFileEmulator);
+    RAMFS<20, 20> TooSmallFileSystem2(CustomFsSize - 1, &RamFileEmulator);
+    //even though it is the same size as the first file system, it is created with enough ram to hold it
+    RAMFS CorrectlySizedFileSystem(CustomFsSize - 1, &RamFileEmulator);
+
+    CHECK(!TooSmallFileSystem1.IsInitialized());
+    CHECK(!TooSmallFileSystem2.IsInitialized());
+    CHECK(CorrectlySizedFileSystem.IsInitialized());
+  }
+
+  IGNORE_TEST(TestFsInstantiation, InstatiationWithNonDefaultArgumentsCreatesCorrectlySizedFs) {
+    RAMFS<4,4> MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
+    RAMFS<8,8> MyFileSystem2(RamAccess::k_RamSize, &RamFileEmulator);
+
+    CHECK(MyFileSystem2.GetRawFileSystemSize()-MyFileSystem1.GetRawFileSystemSize()==(4*sizeof(RamFsFile)+4*sizeof(RamFsFragment)));
+    CHECK(0); //always fail when run, until test is improved when structures are more stable
+
+    //this seems to work, but due to packing, this test is implementation dependent, so delay it until structures are stable 
+  }
+
+  // CONST CORRECTNESS!!! (also for methods)
 
   //separate test files, separate src files
 
-  // CONST CORRECTNESS!!! (also for methods)
   //add doxygen comments

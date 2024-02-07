@@ -28,7 +28,7 @@ class RAMFS {
   size_t GetUsableSize();
   size_t GetRawFileSystemSize();
   void GetRawFileSystem(void* pData, size_t size);
-  void _TempFileMangler_();
+  void _TempFileEdit_();
   bool WasLoaded();
   bool IsInitialized();
  private:
@@ -52,7 +52,7 @@ class RAMFS {
 template <size_t FileNr, size_t FragmentNr>
 RAMFS<FileNr, FragmentNr>::RAMFS(size_t ramSize, RamAccess* pRamAccess)
     : m_ramAccess(pRamAccess) {
-  if (m_ramAccess != nullptr && ramSize<=RamAccess::k_RamSize) {
+  if (m_ramAccess != nullptr && ramSize<=RamAccess::k_RamSize && ramSize >= sizeof(m_FileSystem)) {
     LoadFsFromRam();
     if (!CheckFileSystem() || m_FileSystem.m_ramSize != ramSize) {
       m_FileSystem.m_ramSize = ramSize;
@@ -91,7 +91,7 @@ void RAMFS<FileNr, FragmentNr>::LoadFsFromRam() {
 
 template <size_t FileNr, size_t FragmentNr>
 void RAMFS<FileNr, FragmentNr>::StoreFsInRam() {
-  //TODO: Add selective write, so not all fs is re-written in ram everytime a byte is written
+  //TODO: Add selective write, maybe in a different function, so not all fs is re-written in ram everytime a byte is written
   if (m_ramAccess != nullptr) {
     m_ramAccess->RamWrite(&m_FileSystem, sizeof(m_FileSystem), 0);
   }
@@ -110,7 +110,7 @@ bool RAMFS<FileNr, FragmentNr>::operator==(const RAMFS& other) const
 }
 
 template <size_t FileNr, size_t FragmentNr>
-void RAMFS<FileNr, FragmentNr>::_TempFileMangler_(){
+void RAMFS<FileNr, FragmentNr>::_TempFileEdit_(){
   m_FileSystem.m_Files[0].dummy=99;
   StoreFsInRam();
 }
