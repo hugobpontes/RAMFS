@@ -217,8 +217,22 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
     //this seems to work, but due to packing, this test is implementation dependent, so delay it until structures are stable 
   }
 
-  // CONST CORRECTNESS!!! (also for methods)
+  //->CONST CORRECTNESS!!! (also for methods)
 
   //separate test files, separate src files
 
   //add doxygen comments
+
+  //test that a file can be created (and its arg variants), include status code variants (TIMESTAMP,invalid string too large, too small,no more file slots,...)
+  //test that a file can be found (and its arg variants), include status code (invalid string too large, too small, not found)
+  //test that one can write to a file (TIMESTAMP,and variants)
+  //test that one can read from a file (and variants)
+  //test that one can get fs free size
+  //test that one can get file size
+  //test that one can get file timestamp
+  //test that one can get filename
+
+  //only when all of the above are done, do we think about appending,deleting and variants that require multiple fragments
+
+
+  //->Add non default size test when structures are stable
