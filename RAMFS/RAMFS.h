@@ -23,7 +23,7 @@ class RamFsFragment{
 template <size_t FileNr = 10, size_t FragmentNr = 10>
 class RAMFS {
  public:
-  RAMFS(size_t ramSize, RamAccess* pRamAccess);
+  RAMFS(size_t ramSize, RamAccess& RamAccess);
   bool operator==(const RAMFS& other) const;
   size_t GetUsableSize();
   size_t GetRawFileSystemSize();
@@ -37,7 +37,7 @@ class RAMFS {
   void StoreFsInRam();
   bool CheckFileSystem();
 
-  RamAccess* m_ramAccess;
+  RamAccess& m_ramAccess;
   bool m_wasLoaded = false;
   bool m_isInitialized = false;
 
@@ -50,9 +50,9 @@ class RAMFS {
 };
 
 template <size_t FileNr, size_t FragmentNr>
-RAMFS<FileNr, FragmentNr>::RAMFS(size_t ramSize, RamAccess* pRamAccess)
-    : m_ramAccess(pRamAccess) {
-  if (m_ramAccess != nullptr && ramSize<=RamAccess::k_RamSize && ramSize >= sizeof(m_FileSystem)) {
+RAMFS<FileNr, FragmentNr>::RAMFS(size_t ramSize, RamAccess& RamAccess)
+    : m_ramAccess(RamAccess) {
+  if (ramSize<=RamAccess::k_RamSize && ramSize >= sizeof(m_FileSystem)) {
     LoadFsFromRam();
     if (!CheckFileSystem() || m_FileSystem.m_ramSize != ramSize) {
       m_FileSystem.m_ramSize = ramSize;
@@ -84,17 +84,13 @@ void RAMFS<FileNr, FragmentNr>::GetRawFileSystem(void* pData, size_t size) {
 
 template <size_t FileNr, size_t FragmentNr>
 void RAMFS<FileNr, FragmentNr>::LoadFsFromRam() {
-  if (m_ramAccess !=nullptr){
-    m_ramAccess->RamRead(&m_FileSystem, sizeof(m_FileSystem), 0);
-  }
+  m_ramAccess.RamRead(&m_FileSystem, sizeof(m_FileSystem), 0);
 }
 
 template <size_t FileNr, size_t FragmentNr>
 void RAMFS<FileNr, FragmentNr>::StoreFsInRam() {
   //TODO: Add selective write, maybe in a different function, so not all fs is re-written in ram everytime a byte is written
-  if (m_ramAccess != nullptr) {
-    m_ramAccess->RamWrite(&m_FileSystem, sizeof(m_FileSystem), 0);
-  }
+  m_ramAccess.RamWrite(&m_FileSystem, sizeof(m_FileSystem), 0);
 }
 
 template <size_t FileNr, size_t FragmentNr>
