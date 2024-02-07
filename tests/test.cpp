@@ -99,7 +99,7 @@ TEST(TestRamAccessFile, MultiByteWriteAndRead) {
   MEMCMP_EQUAL(w_vals,r_vals,sizeof(w_vals));
 }
 
-TEST_GROUP(TestFsLoad){
+TEST_GROUP(TestFsInstantiation){
   void setup(){
     RamFileEmulator.RamClear();
   }
@@ -108,7 +108,7 @@ TEST_GROUP(TestFsLoad){
   }
 };
 
-TEST(TestFsLoad, FileSystemHasAcceptableSize) {
+TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
 
   size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
@@ -118,7 +118,7 @@ TEST(TestFsLoad, FileSystemHasAcceptableSize) {
   CHECK_TEXT(RawFileSystemSize < k_acceptableFsSize, ErrorString.data());
 }
 
-  TEST(TestFsLoad, FileSystemIsStoredInRam) {
+  TEST(TestFsInstantiation, FileSystemIsStoredInRam) {
     RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
 
     size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
@@ -135,21 +135,51 @@ TEST(TestFsLoad, FileSystemHasAcceptableSize) {
     delete[] GetterFileSystemParams;
   }
 
-  TEST(TestFsLoad, FileSystemIsLoaded) {
+  TEST(TestFsInstantiation, FileSystemIsLoadedWhenEqualSize) {
     RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
-    RAMFS MyFileSystem2(RamAccess::k_RamSize - 100,&RamFileEmulator);  // using a different size would mean different internal parameters if fs wasnt loaded
-    //CHECK_EQUAL(MyFileSystem1,MyFileSystem2);
+    MyFileSystem1._TempFileMangler_();
+    RAMFS MyFileSystem2(RamAccess::k_RamSize,&RamFileEmulator);
+
+    CHECK(MyFileSystem1.IsInitialized());
+    CHECK(MyFileSystem2.IsInitialized());
+    CHECK(!MyFileSystem1.WasLoaded());
+    CHECK(MyFileSystem2.WasLoaded());
     CHECK(MyFileSystem1 == MyFileSystem2);
   }
 
-  // add checks for nullptrs
+    TEST(TestFsInstantiation, FileSystemIsNotLoadedWhenDifferentSize) {
+    RAMFS MyFileSystem1(RamAccess::k_RamSize, &RamFileEmulator);
+    RAMFS MyFileSystem2(RamAccess::k_RamSize-100,&RamFileEmulator);
 
-  // revamp RamAccess::k_RamSize
+    CHECK(MyFileSystem1.IsInitialized());
+    CHECK(MyFileSystem2.IsInitialized());
+    CHECK(!MyFileSystem1.WasLoaded());
+    CHECK(!MyFileSystem2.WasLoaded());
+    CHECK(!(MyFileSystem1 == MyFileSystem2));
+  }
 
-  // CONST CORRECTNESS!!! (also for methods)
+  TEST(TestFsInstantiation, NullPtrInstantionDoesntCrash) {
+    RAMFS MyFileSystem1(RamAccess::k_RamSize, nullptr);
 
-  // test case where size provided is incompatible with ram size too little or
-  // too large also test initialization test non standard arguments test with
-  // corrupted load data test gettting file system into small array
+    // check that initialization was skipped due to bad param
+    CHECK (!MyFileSystem1.IsInitialized()); 
+
+  }
+
+  TEST(TestFsInstantiation, InstatiationWithTooLargeSizeIsIgnored) {
+    RAMFS MyFileSystem1(RamAccess::k_RamSize+10,&RamFileEmulator);
+
+    // check that initialization was skipped due to bad param
+    CHECK(!MyFileSystem1.IsInitialized());
+  }
+
+
+  //test instantiate with bad size Over ram size (from accessor) 
+
+  // also test initialization test non standard arguments 
+  //test case where file system does not fit in RAM
 
   //separate test files, separate src files
+
+  // CONST CORRECTNESS!!! (also for methods)
+  //add doxygen comments
