@@ -1,5 +1,5 @@
 #include "RAMFS.h"
 
-bool RamAccess::CheckRamAccessParameters (void* pData, size_t size, size_t address){
-return (pData != nullptr && size <= k_RamSize && address < k_RamSize);
+bool RamAccess::CheckRamAccessParameters (const void* const pData, const size_t size, const size_t address) const {
+    return (pData != nullptr && size <= k_RamSize && address < k_RamSize);
 }

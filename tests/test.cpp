@@ -7,7 +7,7 @@
 #include "RAMFS.h"
 
 //helper code
-static std::array<char,RamAccess::k_RamSize> zerobuffer{};
+static const std::array<char,RamAccess::k_RamSize> zerobuffer{};
 constexpr int k_acceptableFsSize = 100;
 class RamAccessFile : public RamAccess {
   public:
@@ -30,7 +30,7 @@ class RamAccessFile : public RamAccess {
 
     file.close();
   }
-  virtual void RamWrite(void* pData, size_t size, size_t address) override {
+  virtual void RamWrite(const void* const pData, const size_t size, const size_t address) const override {
     if (!CheckRamAccessParameters(pData, size, address)) {
       std::cerr << "Bad write access parameters" << std::endl;
       return;
@@ -45,12 +45,12 @@ class RamAccessFile : public RamAccess {
     file.seekp(address, std::ios::beg);
 
     // Write data to the file
-    file.write(static_cast<char*>(pData), size);
+    file.write(static_cast<const char* const>(pData), size);
 
     file.close();
   }
 
-  virtual void RamRead(void* pData, size_t size, size_t address) override {
+  virtual void RamRead(void* const pData, const size_t size, const size_t address) const override {
     if (!CheckRamAccessParameters(pData, size, address)) {
       std::cerr << "Bad read access parameters" << std::endl;
       return;
