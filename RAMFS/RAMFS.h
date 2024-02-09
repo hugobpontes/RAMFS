@@ -1,22 +1,22 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
+#include <cstring>
+
 
 #include "RamAccess.h"
+#include "RAMFSFile.h"
+#include "RAMFSFragment.h"
 
-class RamFsFile{
-  public:
-  uint8_t dummy;
+enum class RAMFS_Status {
+  SUCCESS,
+  INVALID_FILENAME,
+  FILE_SLOTS_FULL,
+  FILE_NOT_FOUND,
 };
-
-class RamFsFragment{
-  public:
-  uint8_t dummier;
-};
-
 template <size_t FileNr = 10, size_t FragmentNr = 10>
 class RAMFS {
+ 
  public:
   RAMFS(const size_t ramSize, const RamAccess& RamAccess);
   bool operator==(const RAMFS& other) const;
@@ -26,6 +26,10 @@ class RAMFS {
   void _TempFileEdit_();
   bool WasLoaded() const;
   bool IsInitialized() const;
+  RAMFS_Status CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp time);
+  RAMFS_Status FindFile(const char* const& fname, RamFsFile*& pFile);
+  unsigned short GetFileCount() const;
+
  private:
   RAMFS() = default;
   void LoadFsFromRam();
@@ -41,6 +45,7 @@ class RAMFS {
     size_t m_ramSize = 0;
     RamFsFragment m_Fragments[FragmentNr] {};
     RamFsFile m_Files[FileNr]{};
+    unsigned short m_FileCount = 0;
   } m_FileSystem;
 };
 
@@ -112,4 +117,48 @@ bool RAMFS<FileNr, FragmentNr>::WasLoaded() const {
 template <size_t FileNr, size_t FragmentNr>
 bool RAMFS<FileNr, FragmentNr>::IsInitialized() const {
   return m_isInitialized;
+}
+template <size_t FileNr, size_t FragmentNr>
+RAMFS_Status RAMFS<FileNr, FragmentNr>::CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp time) {
+  RAMFS_Status status = RAMFS_Status::FILE_SLOTS_FULL;
+  size_t filename_length = strlen(fname);
+  if (filename_length <= 0 || filename_length >= k_FilenameMaxSize) { 
+    status = RAMFS_Status::INVALID_FILENAME;
+    pFile = nullptr;
+  } else {
+    for (int i = 0; i < FileNr; i++) {
+      if (m_FileSystem.m_Files[i].m_isActive == false){
+        memcpy(&(m_FileSystem.m_Files[i].m_filename), fname, filename_length);
+        m_FileSystem.m_Files[i].m_timestamp=time;
+        m_FileSystem.m_Files[i].m_isActive = true;
+        m_FileSystem.m_FileCount++;
+        pFile = &(m_FileSystem.m_Files[i]);
+        status = RAMFS_Status::SUCCESS;
+        break;
+      } 
+    }
+  }
+  return status;
+}
+template <size_t FileNr, size_t FragmentNr>
+RAMFS_Status RAMFS<FileNr, FragmentNr>::FindFile(const char* const& fname, RamFsFile*& pFile) {
+  RAMFS_Status status = RAMFS_Status::FILE_NOT_FOUND;
+  size_t filename_length = strlen(fname);
+  if (filename_length <= 0 || filename_length >= k_FilenameMaxSize) {
+    pFile = nullptr;
+    status = RAMFS_Status::INVALID_FILENAME;
+  } else {
+    for (int i = 0; i < FileNr; i++) {
+      if (!(strcmp(m_FileSystem.m_Files[i].m_filename,fname))) {
+        pFile = &(m_FileSystem.m_Files[i]);
+        status = RAMFS_Status::SUCCESS;
+        break;
+      }
+    }
+  }
+  return status;
+}
+template <size_t FileNr, size_t FragmentNr>
+unsigned short RAMFS<FileNr, FragmentNr>::GetFileCount() const {
+  return m_FileSystem.m_FileCount;
 }

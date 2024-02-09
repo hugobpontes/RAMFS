@@ -6,7 +6,8 @@
 
 #include "RAMFS.h"
 #include "RamAccessFile.h"
-
+#include "RAMFSFile.h"
+#include "RAMFSFragment.h"
 
 RamAccessFile RamFileEmulator("unit_testing/RAMEmulator.bin");
 
@@ -145,20 +146,105 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
     //this seems to work, but due to packing, this test is implementation dependent, so delay it until structures are stable 
   }
 
-  //separate test files, separate src files
 
-  //test that a file can be created (and its arg variants), include status code variants (TIMESTAMP,invalid string too large, too small,no more file slots,...)
-  //test that a file can be found (and its arg variants), include status code (invalid string too large, too small, not found)
-  //test that one can write to a file (TIMESTAMP,and variants)
-  //test that one can read from a file (and variants)
-  //test that one can get fs free size
-  //test that one can get file size
-  //test that one can get file timestamp
-  //test that one can get filename
+TEST_GROUP(TestFileCreationAndFind){
+  void setup(){
+    RamFileEmulator.RamClear();
+  }
+  void teardown() {
 
-  //only when all of the above are done, do we think about appending,deleting and variants that require multiple fragments
+  }
+};
+
+  TEST(TestFileCreationAndFind, SingleFileCanBeCreatedAndFound) {
+    RAMFS MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    RamFsFile* pMyFile1;
+    RamFsFile* pMyFile2;
+    RAMFS_Status creation_status;
+    RAMFS_Status find_status;
+
+    creation_status = MyFileSystem.CreateFile("a.txt", pMyFile1, 100);
+    find_status = MyFileSystem.FindFile("a.txt", pMyFile2);
+
+    CHECK(pMyFile1 == pMyFile2);
+    CHECK(MyFileSystem.GetFileCount() == 1);
+    CHECK(creation_status == RAMFS_Status::SUCCESS);
+    CHECK(find_status == RAMFS_Status::SUCCESS);
+  }
+
+  TEST(TestFileCreationAndFind, MultipleFilesCanBeCreatedAndFound) {
+    RAMFS MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    RamFsFile* pMyFile1;
+    RamFsFile* pMyFile2;
+    RamFsFile* pMyFile3;
+    RamFsFile* pMyFile4;
+    RAMFS_Status creation_status1;
+    RAMFS_Status creation_status2;
+    RAMFS_Status find_status1;
+    RAMFS_Status find_status2;
+
+    creation_status1 = MyFileSystem.CreateFile("a.txt", pMyFile1, 100);
+    creation_status2 = MyFileSystem.CreateFile("b", pMyFile2, 110); //confirm that single char filenames work
+    find_status1 = MyFileSystem.FindFile("a.txt", pMyFile3);
+    find_status2 = MyFileSystem.FindFile("b", pMyFile4);
+
+    CHECK(MyFileSystem.GetFileCount() == 2);
+    CHECK(creation_status1 == RAMFS_Status::SUCCESS);
+    CHECK(creation_status2 == RAMFS_Status::SUCCESS);
+    CHECK(find_status1 == RAMFS_Status::SUCCESS);
+    CHECK(find_status2 == RAMFS_Status::SUCCESS);
+    CHECK(pMyFile1 == pMyFile3);
+    CHECK(pMyFile2 == pMyFile4);
+  }
+
+  TEST(TestFileCreationAndFind, CreateAndFindWithBadFilenames) {
+    RAMFS MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    RamFsFile* pMyFile1;
+    RamFsFile* pMyFile2;
+    RamFsFile* pMyFile3;
+    RamFsFile* pMyFile4;
+    RAMFS_Status creation_status1;
+    RAMFS_Status creation_status2;
+    RAMFS_Status find_status1;
+    RAMFS_Status find_status2;
+
+    creation_status1 = MyFileSystem.CreateFile("", pMyFile1, 100);
+    creation_status2 = MyFileSystem.CreateFile("filename_is_long.txt", pMyFile2, 100);
+    find_status1 = MyFileSystem.FindFile("", pMyFile3);
+    find_status2 = MyFileSystem.FindFile("filename_is_long.txt", pMyFile4);
+
+    CHECK(creation_status1 == RAMFS_Status::INVALID_FILENAME);
+    CHECK(find_status1 == RAMFS_Status::INVALID_FILENAME);
+    CHECK(creation_status2 == RAMFS_Status::INVALID_FILENAME);
+    CHECK(find_status2 == RAMFS_Status::INVALID_FILENAME);
+    CHECK(pMyFile1 == nullptr);
+    CHECK(pMyFile2 == nullptr);
+    CHECK(pMyFile3 == nullptr);
+    CHECK(pMyFile4 == nullptr);
+  }
+    // finding non-existing file
+    // creating when file slots are full
+
+    // tidy class/file names, make all lower case
 
 
-  //->Add non default size test when structures are stable
+    // test that a file can be created (and its arg variants), include status
+    // code variants (TIMESTAMP,invalid string too large, too small,no more file
+    // slots,...) test that a file can be found (and its arg variants), include
+    // status code (invalid string too large, too small, not found) test that
+    // one can write to a file (TIMESTAMP,and variants) test that one can read
+    // from a file (and variants) test that one can get fs free size test that
+    // one can get file size test that one can get file timestamp test that one
+    // can get filename
 
-  // add doxygen comments
+    // only when all of the above are done, do we think about appending,deleting
+    // and variants that require multiple fragments
+
+    // add feature to only store parts of the filesystem
+
+    //->Add non default size test when structures are stable
+
+    // add doxygen comments
