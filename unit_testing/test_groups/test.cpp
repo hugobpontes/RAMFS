@@ -47,25 +47,25 @@ TEST_GROUP(TestFsInstantiation){
 TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   RamFs MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
 
-  size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
+  size_t StorableFileSystemSize = MyFileSystem1.GetStorableFileSystemSize();
 
-  std::string ErrorString = "File System Size over limit("+std::to_string(k_acceptableFsSize)+"): " + std::to_string(RawFileSystemSize);
+  std::string ErrorString = "File System Size over limit("+std::to_string(k_acceptableFsSize)+"): " + std::to_string(StorableFileSystemSize);
 
-  CHECK_TEXT(RawFileSystemSize < k_acceptableFsSize, ErrorString.data());
+  CHECK_TEXT(StorableFileSystemSize < k_acceptableFsSize, ErrorString.data());
 }
 
   TEST(TestFsInstantiation, FileSystemIsStoredInRam) {
     RamFs MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
 
-    size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
+    size_t StorableFileSystemSize = MyFileSystem1.GetStorableFileSystemSize();
 
-    uint8_t* RamFileSystemParams = new uint8_t[RawFileSystemSize];
-    uint8_t* GetterFileSystemParams = new uint8_t[RawFileSystemSize];
-    RamFileEmulator.RamRead(RamFileSystemParams, RawFileSystemSize, 0);
-    MyFileSystem1.GetRawFileSystem(GetterFileSystemParams, RawFileSystemSize);
+    uint8_t* RamFileSystemParams = new uint8_t[StorableFileSystemSize];
+    uint8_t* GetterFileSystemParams = new uint8_t[StorableFileSystemSize];
+    RamFileEmulator.RamRead(RamFileSystemParams, StorableFileSystemSize, 0);
+    MyFileSystem1.GetStorableFileSystem(GetterFileSystemParams, StorableFileSystemSize);
 
     MEMCMP_EQUAL(RamFileSystemParams, GetterFileSystemParams,
-                 RawFileSystemSize);
+                 StorableFileSystemSize);
 
     delete[] RamFileSystemParams;
     delete[] GetterFileSystemParams;
@@ -123,8 +123,8 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
     RamFs UsedToGetSize1(RamAccess::k_RamSize, RamFileEmulator);
     RamFs<20, 20> UsedToGetSize2(RamAccess::k_RamSize, RamFileEmulator);
 
-    size_t DefaultFsSize = UsedToGetSize1.GetRawFileSystemSize();
-    size_t CustomFsSize = UsedToGetSize2.GetRawFileSystemSize();
+    size_t DefaultFsSize = UsedToGetSize1.GetStorableFileSystemSize();
+    size_t CustomFsSize = UsedToGetSize2.GetStorableFileSystemSize();
 
     RamFs TooSmallFileSystem1(DefaultFsSize-1, RamFileEmulator);
     RamFs<20, 20> TooSmallFileSystem2(CustomFsSize - 1, RamFileEmulator);
@@ -140,7 +140,7 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
     RamFs<4,4> MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
     RamFs<8,8> MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
 
-    CHECK(MyFileSystem2.GetRawFileSystemSize()-MyFileSystem1.GetRawFileSystemSize()==(4*sizeof(RamFsFile)+4*sizeof(RamFsFragment)));
+    CHECK(MyFileSystem2.GetStorableFileSystemSize()-MyFileSystem1.GetStorableFileSystemSize()==(4*sizeof(RamFsFile)+4*sizeof(RamFsFragment)));
     CHECK(0); //always fail when run, until test is improved when structures are more stable
 
     //this seems to work, but due to packing, this test is implementation dependent, so delay it until structures are stable 
@@ -225,7 +225,22 @@ TEST_GROUP(TestFileCreationAndFind){
     CHECK(pMyFile3 == nullptr);
     CHECK(pMyFile4 == nullptr);
   }
-    // finding non-existing file
+
+  TEST(TestFileCreationAndFind, CreateAndFindInexistentFile) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    RamFsFile* pMyFile1;
+    RamFsFile* pMyFile2;
+    RamFs_Status creation_status;
+    RamFs_Status find_status;
+
+    creation_status = MyFileSystem.CreateFile("file.txt",pMyFile1,100);
+    find_status = MyFileSystem.FindFile("doesnt_exist.txt",pMyFile2);
+
+    CHECK(creation_status == RamFs_Status::SUCCESS);
+    CHECK(find_status == RamFs_Status::FILE_NOT_FOUND);
+    CHECK(pMyFile2 == nullptr);
+  }
     // creating when file slots are full
 
     // tidy class/file names, make all lower case

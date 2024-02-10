@@ -7,7 +7,7 @@ constexpr int k_FilenameMaxSize = 20;
 using Filename = char[k_FilenameMaxSize];
 using Timestamp = unsigned long;
 
-/*Needs forward declaration so it can be friends with file system class*/
+/*Needs forward declaration so file system class can be its friend*/
 template <size_t FileNr, size_t FragmentNr>
 class RamFs;
 
