@@ -4,10 +4,10 @@
 #include <fstream>
 #include <iostream>
 
-#include "RAMFS.h"
+#include "RamFs.h"
 #include "RamAccessFile.h"
-#include "RAMFSFile.h"
-#include "RAMFSFragment.h"
+#include "RamFsFile.h"
+#include "RamFsFragment.h"
 
 RamAccessFile RamFileEmulator("unit_testing/RAMEmulator.bin");
 
@@ -45,7 +45,7 @@ TEST_GROUP(TestFsInstantiation){
 };
 
 TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
-  RAMFS MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
+  RamFs MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
 
   size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
 
@@ -55,7 +55,7 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
 }
 
   TEST(TestFsInstantiation, FileSystemIsStoredInRam) {
-    RAMFS MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
 
     size_t RawFileSystemSize = MyFileSystem1.GetRawFileSystemSize();
 
@@ -72,10 +72,10 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   }
 
   TEST(TestFsInstantiation, FileSystemIsLoadedWhenEqualSize) {
-    RAMFS NotLoadedFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs NotLoadedFileSystem(RamAccess::k_RamSize, RamFileEmulator);
     // edit original fs so we can test that the second is loaded from it
     NotLoadedFileSystem._TempFileEdit_(); 
-    RAMFS LoadedFileSystem(RamAccess::k_RamSize,RamFileEmulator);
+    RamFs LoadedFileSystem(RamAccess::k_RamSize,RamFileEmulator);
 
     CHECK(NotLoadedFileSystem.IsInitialized());
     CHECK(LoadedFileSystem.IsInitialized());
@@ -85,8 +85,8 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   }
 
     TEST(TestFsInstantiation, FileSystemIsNotLoadedWhenDifferentSize) {
-      RAMFS NotLoadedFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
-      RAMFS NotLoadedFileSystem2(RamAccess::k_RamSize - 100, RamFileEmulator);
+      RamFs NotLoadedFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
+      RamFs NotLoadedFileSystem2(RamAccess::k_RamSize - 100, RamFileEmulator);
 
       CHECK(NotLoadedFileSystem1.IsInitialized());
       CHECK(NotLoadedFileSystem2.IsInitialized());
@@ -96,12 +96,12 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   }
 
   TEST(TestFsInstantiation, FileSystemIsNotLoadedWhenBrokenOrInexistent) {
-    RAMFS NotLoadedFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs NotLoadedFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
     // edit original fs so we can test that the second is not loaded from it
     NotLoadedFileSystem1._TempFileEdit_();
     //clear ram so file system can't be loaded from it
     RamFileEmulator.RamClear();
-    RAMFS NotLoadedFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs NotLoadedFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
 
     CHECK(NotLoadedFileSystem1.IsInitialized());
     CHECK(NotLoadedFileSystem2.IsInitialized());
@@ -111,7 +111,7 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   }
 
   TEST(TestFsInstantiation, InstatiationWithTooLargeRamSizeIsIgnored) {
-    RAMFS TooLargeRamSizeFileSystem(RamAccess::k_RamSize+10,RamFileEmulator);
+    RamFs TooLargeRamSizeFileSystem(RamAccess::k_RamSize+10,RamFileEmulator);
 
     // check that initialization was skipped due to bad param
     CHECK(!TooLargeRamSizeFileSystem.IsInitialized());
@@ -120,16 +120,16 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   TEST(TestFsInstantiation, InstatiationWithTooSmallRamIsIgnored) {
     // test case where ram size is too small to accomodate fs
 
-    RAMFS UsedToGetSize1(RamAccess::k_RamSize, RamFileEmulator);
-    RAMFS<20, 20> UsedToGetSize2(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs UsedToGetSize1(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs<20, 20> UsedToGetSize2(RamAccess::k_RamSize, RamFileEmulator);
 
     size_t DefaultFsSize = UsedToGetSize1.GetRawFileSystemSize();
     size_t CustomFsSize = UsedToGetSize2.GetRawFileSystemSize();
 
-    RAMFS TooSmallFileSystem1(DefaultFsSize-1, RamFileEmulator);
-    RAMFS<20, 20> TooSmallFileSystem2(CustomFsSize - 1, RamFileEmulator);
+    RamFs TooSmallFileSystem1(DefaultFsSize-1, RamFileEmulator);
+    RamFs<20, 20> TooSmallFileSystem2(CustomFsSize - 1, RamFileEmulator);
     //even though it is the same size as the first file system, it is created with enough ram to hold it
-    RAMFS CorrectlySizedFileSystem(CustomFsSize - 1, RamFileEmulator);
+    RamFs CorrectlySizedFileSystem(CustomFsSize - 1, RamFileEmulator);
 
     CHECK(!TooSmallFileSystem1.IsInitialized());
     CHECK(!TooSmallFileSystem2.IsInitialized());
@@ -137,8 +137,8 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   }
 
   IGNORE_TEST(TestFsInstantiation, InstatiationWithNonDefaultArgumentsCreatesCorrectlySizedFs) {
-    RAMFS<4,4> MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
-    RAMFS<8,8> MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs<4,4> MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs<8,8> MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
 
     CHECK(MyFileSystem2.GetRawFileSystemSize()-MyFileSystem1.GetRawFileSystemSize()==(4*sizeof(RamFsFile)+4*sizeof(RamFsFragment)));
     CHECK(0); //always fail when run, until test is improved when structures are more stable
@@ -157,33 +157,33 @@ TEST_GROUP(TestFileCreationAndFind){
 };
 
   TEST(TestFileCreationAndFind, SingleFileCanBeCreatedAndFound) {
-    RAMFS MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     RamFsFile* pMyFile1;
     RamFsFile* pMyFile2;
-    RAMFS_Status creation_status;
-    RAMFS_Status find_status;
+    RamFs_Status creation_status;
+    RamFs_Status find_status;
 
     creation_status = MyFileSystem.CreateFile("a.txt", pMyFile1, 100);
     find_status = MyFileSystem.FindFile("a.txt", pMyFile2);
 
     CHECK(pMyFile1 == pMyFile2);
     CHECK(MyFileSystem.GetFileCount() == 1);
-    CHECK(creation_status == RAMFS_Status::SUCCESS);
-    CHECK(find_status == RAMFS_Status::SUCCESS);
+    CHECK(creation_status == RamFs_Status::SUCCESS);
+    CHECK(find_status == RamFs_Status::SUCCESS);
   }
 
   TEST(TestFileCreationAndFind, MultipleFilesCanBeCreatedAndFound) {
-    RAMFS MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     RamFsFile* pMyFile1;
     RamFsFile* pMyFile2;
     RamFsFile* pMyFile3;
     RamFsFile* pMyFile4;
-    RAMFS_Status creation_status1;
-    RAMFS_Status creation_status2;
-    RAMFS_Status find_status1;
-    RAMFS_Status find_status2;
+    RamFs_Status creation_status1;
+    RamFs_Status creation_status2;
+    RamFs_Status find_status1;
+    RamFs_Status find_status2;
 
     creation_status1 = MyFileSystem.CreateFile("a.txt", pMyFile1, 100);
     creation_status2 = MyFileSystem.CreateFile("b", pMyFile2, 110); //confirm that single char filenames work
@@ -191,35 +191,35 @@ TEST_GROUP(TestFileCreationAndFind){
     find_status2 = MyFileSystem.FindFile("b", pMyFile4);
 
     CHECK(MyFileSystem.GetFileCount() == 2);
-    CHECK(creation_status1 == RAMFS_Status::SUCCESS);
-    CHECK(creation_status2 == RAMFS_Status::SUCCESS);
-    CHECK(find_status1 == RAMFS_Status::SUCCESS);
-    CHECK(find_status2 == RAMFS_Status::SUCCESS);
+    CHECK(creation_status1 == RamFs_Status::SUCCESS);
+    CHECK(creation_status2 == RamFs_Status::SUCCESS);
+    CHECK(find_status1 == RamFs_Status::SUCCESS);
+    CHECK(find_status2 == RamFs_Status::SUCCESS);
     CHECK(pMyFile1 == pMyFile3);
     CHECK(pMyFile2 == pMyFile4);
   }
 
   TEST(TestFileCreationAndFind, CreateAndFindWithBadFilenames) {
-    RAMFS MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     RamFsFile* pMyFile1;
     RamFsFile* pMyFile2;
     RamFsFile* pMyFile3;
     RamFsFile* pMyFile4;
-    RAMFS_Status creation_status1;
-    RAMFS_Status creation_status2;
-    RAMFS_Status find_status1;
-    RAMFS_Status find_status2;
+    RamFs_Status creation_status1;
+    RamFs_Status creation_status2;
+    RamFs_Status find_status1;
+    RamFs_Status find_status2;
 
     creation_status1 = MyFileSystem.CreateFile("", pMyFile1, 100);
     creation_status2 = MyFileSystem.CreateFile("filename_is_long.txt", pMyFile2, 100);
     find_status1 = MyFileSystem.FindFile("", pMyFile3);
     find_status2 = MyFileSystem.FindFile("filename_is_long.txt", pMyFile4);
 
-    CHECK(creation_status1 == RAMFS_Status::INVALID_FILENAME);
-    CHECK(find_status1 == RAMFS_Status::INVALID_FILENAME);
-    CHECK(creation_status2 == RAMFS_Status::INVALID_FILENAME);
-    CHECK(find_status2 == RAMFS_Status::INVALID_FILENAME);
+    CHECK(creation_status1 == RamFs_Status::INVALID_FILENAME);
+    CHECK(find_status1 == RamFs_Status::INVALID_FILENAME);
+    CHECK(creation_status2 == RamFs_Status::INVALID_FILENAME);
+    CHECK(find_status2 == RamFs_Status::INVALID_FILENAME);
     CHECK(pMyFile1 == nullptr);
     CHECK(pMyFile2 == nullptr);
     CHECK(pMyFile3 == nullptr);

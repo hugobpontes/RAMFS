@@ -1,19 +1,20 @@
 #pragma once
 
-#include "RAMFS.h"
+#include "RamFs.h"
 
 constexpr int k_FilenameMaxSize = 20;
 
 using Filename = char[k_FilenameMaxSize];
 using Timestamp = unsigned long;
 
+/*Needs forward declaration so it can be friends with file system class*/
 template <size_t FileNr, size_t FragmentNr>
-class RAMFS;
+class RamFs;
 
 class RamFsFile {
  public:
   template <size_t FileNr, size_t FragmentNr>
-  friend class RAMFS;
+  friend class RamFs;
 
  private: 
   Filename m_filename;
