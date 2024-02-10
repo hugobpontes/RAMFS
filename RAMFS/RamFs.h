@@ -120,7 +120,10 @@ bool RamFs<FileNr, FragmentNr>::IsInitialized() const {
 }
 template <size_t FileNr, size_t FragmentNr>
 RamFs_Status RamFs<FileNr, FragmentNr>::CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp time) {
+  /*Default output values, to be changed if file is created successfully*/
   RamFs_Status status = RamFs_Status::FILE_SLOTS_FULL;
+  pFile = nullptr;
+
   size_t filename_length = strlen(fname);
   if (filename_length <= 0 || filename_length >= k_FilenameMaxSize) { 
     status = RamFs_Status::INVALID_FILENAME;
@@ -142,7 +145,9 @@ RamFs_Status RamFs<FileNr, FragmentNr>::CreateFile(const char* const& fname, Ram
 }
 template <size_t FileNr, size_t FragmentNr>
 RamFs_Status RamFs<FileNr, FragmentNr>::FindFile(const char* const& fname, RamFsFile*& pFile) {
+  /*Default output values, to be changed if file is created successfully*/
   RamFs_Status status = RamFs_Status::FILE_NOT_FOUND;
+  pFile = nullptr;
   size_t filename_length = strlen(fname);
   if (filename_length <= 0 || filename_length >= k_FilenameMaxSize) {
     pFile = nullptr;

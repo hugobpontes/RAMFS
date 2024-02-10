@@ -9,6 +9,8 @@
 #include "RamFsFile.h"
 #include "RamFsFragment.h"
 
+#include <stdlib.h>
+
 RamAccessFile RamFileEmulator("unit_testing/RAMEmulator.bin");
 
 TEST_GROUP(TestRamAccessFile){
@@ -229,21 +231,35 @@ TEST_GROUP(TestFileCreationAndFind){
   TEST(TestFileCreationAndFind, CreateAndFindInexistentFile) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
-    RamFsFile* pMyFile1;
-    RamFsFile* pMyFile2;
+    RamFsFile* pMyFile;
     RamFs_Status creation_status;
     RamFs_Status find_status;
 
-    creation_status = MyFileSystem.CreateFile("file.txt",pMyFile1,100);
-    find_status = MyFileSystem.FindFile("doesnt_exist.txt",pMyFile2);
+    creation_status = MyFileSystem.CreateFile("file.txt",pMyFile,100);
+    find_status = MyFileSystem.FindFile("doesnt_exist.txt",pMyFile);
 
     CHECK(creation_status == RamFs_Status::SUCCESS);
     CHECK(find_status == RamFs_Status::FILE_NOT_FOUND);
-    CHECK(pMyFile2 == nullptr);
+    CHECK(pMyFile == nullptr);
   }
-    // creating when file slots are full
 
-    // tidy class/file names, make all lower case
+  TEST(TestFileCreationAndFind, FileSlotsFull) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    RamFsFile* pMyFile;
+    RamFs_Status creation_status;
+
+    for (int i = 0;i<10;i++){
+      creation_status = MyFileSystem.CreateFile(("name"+std::to_string(i)).data(), pMyFile, 100);
+      CHECK(creation_status == RamFs_Status::SUCCESS);
+    }
+    creation_status = MyFileSystem.CreateFile(("name"+std::to_string(10)).data(),pMyFile,100);
+    CHECK(creation_status == RamFs_Status::FILE_SLOTS_FULL);
+    CHECK(pMyFile == nullptr);
+  }
+
+    //filename taken (don't increase count), ptr is the same
+    // creating when file slots are full
 
 
     // test that a file can be created (and its arg variants), include status
