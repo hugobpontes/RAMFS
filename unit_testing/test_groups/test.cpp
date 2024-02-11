@@ -6,8 +6,6 @@
 
 #include "RamFs.h"
 #include "RamAccessFile.h"
-#include "RamFsFile.h"
-#include "RamFsFragment.h"
 
 #include <stdlib.h>
 
@@ -258,24 +256,26 @@ TEST_GROUP(TestFileCreationAndFind){
     CHECK(pMyFile == nullptr);
   }
 
-    //filename taken (don't increase count), ptr is the same
-    // creating when file slots are full
+  TEST(TestFileCreationAndFind, FileAlreadyExists) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    RamFsFile* pMyFile1;
+    RamFsFile* pMyFile2;
+    RamFs_Status creation_status1;
+    RamFs_Status creation_status2;
+
+    Timestamp t_creation = 100;
+
+    creation_status1 =MyFileSystem.CreateFile("file.txt", pMyFile1, t_creation);
+    creation_status2 = MyFileSystem.CreateFile("file.txt", pMyFile2,t_creation + 100);  // timestamp could also have been 100
+
+    CHECK(creation_status1 == RamFs_Status::SUCCESS);
+    CHECK(creation_status2 == RamFs_Status::SUCCESS);
+    CHECK(pMyFile2 == pMyFile1);
+    CHECK(MyFileSystem.GetFileCount() == 1);
+    /*Timestamp should be unaltered when creating a file already created*/
+    CHECK(pMyFile1->GetCreationTimestamp() == pMyFile2->GetCreationTimestamp());
+  }
 
 
-    // test that a file can be created (and its arg variants), include status
-    // code variants (TIMESTAMP,invalid string too large, too small,no more file
-    // slots,...) test that a file can be found (and its arg variants), include
-    // status code (invalid string too large, too small, not found) test that
-    // one can write to a file (TIMESTAMP,and variants) test that one can read
-    // from a file (and variants) test that one can get fs free size test that
-    // one can get file size test that one can get file timestamp test that one
-    // can get filename
-
-    // only when all of the above are done, do we think about appending,deleting
-    // and variants that require multiple fragments
-
-    // add feature to only store parts of the filesystem
-
-    //->Add non default size test when structures are stable
-
-    // add doxygen comments
+    /* test that one can write to a file (TIMESTAMP,and variants) test that one can read from a file (and variants) test that one can get fs free size test that one can get file size test that one can get file timestamp test that one can get filename only when all of the above are done, do we think about appending,deleting and variants that require multiple fragments add feature to only store parts of the filesystem ->Add non default size test when structures are stable add doxygen comments*/

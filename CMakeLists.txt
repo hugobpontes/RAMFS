@@ -10,7 +10,7 @@ find_package(CppUTest REQUIRED)
 
 set(SrcInc RAMFS/ unit_testing/fakes)
 set(RunnerFile unit_testing/runner.cpp)
-set(SrcFiles RAMFS/RamAccess.cpp )
+set(SrcFiles RAMFS/RamAccess.cpp RAMFS/RamFs.cpp)
 set(TestFiles unit_testing/test_groups/test.cpp )
 
 add_executable(RAMFS_tests ${RunnerFile} ${TestFiles} ${SrcFiles})

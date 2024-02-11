@@ -5,8 +5,11 @@
 
 
 #include "RamAccess.h"
-#include "RamFsFile.h"
-#include "RamFsFragment.h"
+
+constexpr int k_FilenameMaxSize = 20;
+
+using Filename = char[k_FilenameMaxSize];
+using Timestamp = unsigned long;
 
 enum class RamFs_Status {
   SUCCESS,
@@ -14,6 +17,10 @@ enum class RamFs_Status {
   FILE_SLOTS_FULL,
   FILE_NOT_FOUND,
 };
+
+class RamFsFile;
+class RamFsFragment;
+
 template <size_t FileNr = 10, size_t FragmentNr = 10>
 class RamFs {
  
@@ -26,7 +33,7 @@ class RamFs {
   void _TempFileEdit_();
   bool WasLoaded() const;
   bool IsInitialized() const;
-  RamFs_Status CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp time);
+  RamFs_Status CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp creation_time);
   RamFs_Status FindFile(const char* const& fname, RamFsFile*& pFile);
   unsigned short GetFileCount() const;
 
@@ -119,33 +126,44 @@ bool RamFs<FileNr, FragmentNr>::IsInitialized() const {
   return m_isInitialized;
 }
 template <size_t FileNr, size_t FragmentNr>
-RamFs_Status RamFs<FileNr, FragmentNr>::CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp time) {
-  /*Default output values, to be changed if file is created successfully*/
-  RamFs_Status status = RamFs_Status::FILE_SLOTS_FULL;
-  pFile = nullptr;
+RamFs_Status RamFs<FileNr, FragmentNr>::CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp creation_time) {
 
-  size_t filename_length = strlen(fname);
-  if (filename_length <= 0 || filename_length >= k_FilenameMaxSize) { 
-    status = RamFs_Status::INVALID_FILENAME;
-    pFile = nullptr;
+  /*First check if filename can be found, and if so, just return a pointer to the found file*/
+  RamFsFile* found_file;
+  RamFs_Status find_status = FindFile(fname, found_file);
+  if (find_status == RamFs_Status::SUCCESS){
+    pFile = found_file;
+    return find_status;
   } else {
-    for (int i = 0; i < FileNr; i++) {
-      if (m_FSys.m_Files[i].m_isActive == false){
-        memcpy(&(m_FSys.m_Files[i].m_filename), fname, filename_length);
-        m_FSys.m_Files[i].m_timestamp=time;
-        m_FSys.m_Files[i].m_isActive = true;
-        m_FSys.m_FileCount++;
-        pFile = &(m_FSys.m_Files[i]);
-        status = RamFs_Status::SUCCESS;
-        break;
-      } 
+    /*Default output values returned when free file slot cannot be found, to be changed if that's not the case*/
+    RamFs_Status status = RamFs_Status::FILE_SLOTS_FULL;
+    pFile = nullptr;
+
+    size_t filename_length = strlen(fname);
+    if (filename_length <= 0 || filename_length >= k_FilenameMaxSize) { 
+      status = RamFs_Status::INVALID_FILENAME;
+      pFile = nullptr;
+    } else {
+      for (int i = 0; i < FileNr; i++) {
+        if (m_FSys.m_Files[i].m_isActive == false){
+          /*Found free file slot, initialize new file*/
+          memcpy(&(m_FSys.m_Files[i].m_filename), fname, filename_length);
+          m_FSys.m_Files[i].m_creation_timestamp=creation_time;
+          m_FSys.m_Files[i].m_isActive = true;
+          m_FSys.m_FileCount++;
+
+          pFile = &(m_FSys.m_Files[i]);
+          status = RamFs_Status::SUCCESS;
+          break;
+        } 
+      }
     }
+    return status;
   }
-  return status;
 }
 template <size_t FileNr, size_t FragmentNr>
 RamFs_Status RamFs<FileNr, FragmentNr>::FindFile(const char* const& fname, RamFsFile*& pFile) {
-  /*Default output values, to be changed if file is created successfully*/
+  /*Default output values returned when file cannot be found, to be changed if that's not the case*/
   RamFs_Status status = RamFs_Status::FILE_NOT_FOUND;
   pFile = nullptr;
   size_t filename_length = strlen(fname);
@@ -167,3 +185,20 @@ template <size_t FileNr, size_t FragmentNr>
 unsigned short RamFs<FileNr, FragmentNr>::GetFileCount() const {
   return m_FSys.m_FileCount;
 }
+
+class RamFsFile {
+ public:
+  template <size_t FileNr, size_t FragmentNr>
+  friend class RamFs;
+  Timestamp GetCreationTimestamp();
+
+ private:
+  Filename m_filename;
+  Timestamp m_creation_timestamp;
+  bool m_isActive = false;
+  char dummy;
+};
+
+class RamFsFragment{
+  
+};
