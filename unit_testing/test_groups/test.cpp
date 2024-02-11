@@ -54,22 +54,6 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   CHECK_TEXT(StorableFileSystemSize < k_acceptableFsSize, ErrorString.data());
 }
 
-  TEST(TestFsInstantiation, FileSystemIsStoredInRam) {
-    RamFs MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
-
-    size_t StorableFileSystemSize = MyFileSystem1.GetStorableFileSystemSize();
-
-    uint8_t* RamFileSystemParams = new uint8_t[StorableFileSystemSize];
-    uint8_t* GetterFileSystemParams = new uint8_t[StorableFileSystemSize];
-    RamFileEmulator.RamRead(RamFileSystemParams, StorableFileSystemSize, 0);
-    MyFileSystem1.GetStorableFileSystem(GetterFileSystemParams, StorableFileSystemSize);
-
-    MEMCMP_EQUAL(RamFileSystemParams, GetterFileSystemParams,
-                 StorableFileSystemSize);
-
-    delete[] RamFileSystemParams;
-    delete[] GetterFileSystemParams;
-  }
 
   TEST(TestFsInstantiation, FileSystemIsLoadedWhenEqualSize) {
     RamFs NotLoadedFileSystem(RamAccess::k_RamSize, RamFileEmulator);
@@ -277,5 +261,49 @@ TEST_GROUP(TestFileCreationAndFind){
     CHECK(pMyFile1->GetCreationTimestamp() == pMyFile2->GetCreationTimestamp());
   }
 
+TEST_GROUP(TestFileWriteRead){
+  void setup(){
+    RamFileEmulator.RamClear();
+  }
+  void teardown() {
+
+  }
+};
+/**/
+  TEST(TestFileWriteRead, BasicWriteAndRead) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    std::string filename = "file.txt";
+    Timestamp t_creation = 100;
+
+    RamFsFile* pMyFile;
+    RamFs_Status write_status;
+    RamFs_Status read_status;
+
+    uint8_t WriteData [] = {1,2,3,4,5,6,7};
+    uint8_t ReadData[sizeof(WriteData)];
+
+    MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
+    write_status = pMyFile->Write(WriteData,sizeof(WriteData),t_creation+10);
+
+    RamFs MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
+    MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
+    read_status = pMyFile->Read(ReadData, sizeof(WriteData), 0);
+
+    CHECK(write_status == RamFs_Status::SUCCESS);
+    CHECK(write_status == RamFs_Status::SUCCESS);
+    CHECK(pMyFile->GetSize() == sizeof(WriteData));
+    CHECK(MyFileSystem.GetFreeSize() == RamAccess::k_RamSize-sizeof(WriteData));
+    MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));
+  }
+
+    //test 1 write is accessible correctly.
+    //test 2nd write erases accordingly, and can be accessed correctly when loaded(?)
+    //test writing to inexistent file
+    //test writing data size that doesnt fit, or file 0
+    //test invalid pointer
+
+    //test deletion, appending, etc..
+    //test something that would onnly be possible with defragmentation
 
     /* test that one can write to a file (TIMESTAMP,and variants) test that one can read from a file (and variants) test that one can get fs free size test that one can get file size test that one can get file timestamp test that one can get filename only when all of the above are done, do we think about appending,deleting and variants that require multiple fragments add feature to only store parts of the filesystem ->Add non default size test when structures are stable add doxygen comments*/

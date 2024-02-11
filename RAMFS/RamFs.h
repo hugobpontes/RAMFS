@@ -6,9 +6,10 @@
 
 #include "RamAccess.h"
 
-constexpr int k_FilenameMaxSize = 20;
+constexpr int k_MaxFilenameSize = 20;
+constexpr int k_MaxFragmentPerFile = 3;
 
-using Filename = char[k_FilenameMaxSize];
+using Filename = char[k_MaxFilenameSize];
 using Timestamp = unsigned long;
 
 enum class RamFs_Status {
@@ -28,6 +29,7 @@ class RamFs {
   RamFs(const size_t ramSize, const RamAccess& RamAccess);
   bool operator==(const RamFs& other) const;
   size_t GetUsableSize() const;
+  size_t GetFreeSize() const;
   size_t GetStorableFileSystemSize() const;
   void GetStorableFileSystem(void* const pData, const size_t size) const;
   void _TempFileEdit_();
@@ -48,7 +50,7 @@ class RamFs {
   bool m_isInitialized = false;
 
   struct StorableFileSystem {
-    size_t m_usableSize = 0;
+    size_t m_freeSize = 0;
     size_t m_ramSize = 0;
     RamFsFragment m_Fragments[FragmentNr] {};
     RamFsFile m_Files[FileNr]{};
@@ -63,7 +65,7 @@ RamFs<FileNr, FragmentNr>::RamFs(const size_t ramSize, const RamAccess& RamAcces
     LoadFsFromRam();
     if (!CheckFileSystem() || m_FSys.m_ramSize != ramSize) {
       m_FSys.m_ramSize = ramSize;
-      m_FSys.m_usableSize = ramSize - sizeof(m_FSys);
+      m_FSys.m_freeSize = ramSize - sizeof(m_FSys);
       StoreFsInRam();
     } else {
       m_wasLoaded = true;
@@ -73,7 +75,12 @@ RamFs<FileNr, FragmentNr>::RamFs(const size_t ramSize, const RamAccess& RamAcces
 }
 template <size_t FileNr, size_t FragmentNr>
 size_t RamFs<FileNr, FragmentNr>::GetUsableSize() const {
-  return m_FSys.m_usableSize;
+  return m_FSys.m_ramSize - sizeof(m_FSys);
+}
+
+template <size_t FileNr, size_t FragmentNr>
+size_t RamFs<FileNr, FragmentNr>::GetFreeSize() const {
+  return m_FSys.m_freeSize;
 }
 
 template <size_t FileNr, size_t FragmentNr>
@@ -102,7 +109,7 @@ void RamFs<FileNr, FragmentNr>::StoreFsInRam() const {
 
 template <size_t FileNr, size_t FragmentNr>
 bool RamFs<FileNr, FragmentNr>::CheckFileSystem() const {
-  return (m_FSys.m_usableSize ==  m_FSys.m_ramSize - sizeof(m_FSys));
+  return (m_FSys.m_freeSize <=  m_FSys.m_ramSize - sizeof(m_FSys));
   /*For now this is the only way to check a correct load, consider adding a signature if nothing else coomes to mind later*/
 }
 
@@ -140,7 +147,7 @@ RamFs_Status RamFs<FileNr, FragmentNr>::CreateFile(const char* const& fname, Ram
     pFile = nullptr;
 
     size_t filename_length = strlen(fname);
-    if (filename_length <= 0 || filename_length >= k_FilenameMaxSize) { 
+    if (filename_length <= 0 || filename_length >= k_MaxFilenameSize) { 
       status = RamFs_Status::INVALID_FILENAME;
       pFile = nullptr;
     } else {
@@ -167,7 +174,7 @@ RamFs_Status RamFs<FileNr, FragmentNr>::FindFile(const char* const& fname, RamFs
   RamFs_Status status = RamFs_Status::FILE_NOT_FOUND;
   pFile = nullptr;
   size_t filename_length = strlen(fname);
-  if (filename_length <= 0 || filename_length >= k_FilenameMaxSize) {
+  if (filename_length <= 0 || filename_length >= k_MaxFilenameSize) {
     pFile = nullptr;
     status = RamFs_Status::INVALID_FILENAME;
   } else {
@@ -190,15 +197,31 @@ class RamFsFile {
  public:
   template <size_t FileNr, size_t FragmentNr>
   friend class RamFs;
-  Timestamp GetCreationTimestamp();
+  Timestamp GetCreationTimestamp() const;
+  RamFs_Status Write (const void* const pData, const size_t size, const Timestamp modif_time);
+  RamFs_Status Read(const void* const pData, const size_t size, const size_t start_pos) const;
+  size_t GetSize() const;
 
  private:
   Filename m_filename;
+  size_t m_fileSize;
   Timestamp m_creation_timestamp;
   bool m_isActive = false;
   char dummy;
 };
 
 class RamFsFragment{
+  public:
+  template <size_t FileNr, size_t FragmentNr>
+  friend class RamFs;
+ private:
+  RamFsFragment() = default;
+  ~RamFsFragment() = default;
+  size_t GetSize() const;
+  void Free();
+  void Allocate(size_t start, size_t end);
+  size_t m_start;
+  size_t m_end;
+  bool m_isFree = true;
   
 };
