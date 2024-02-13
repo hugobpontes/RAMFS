@@ -47,7 +47,7 @@ TEST_GROUP(TestFsInstantiation){
 TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   RamFs MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
 
-  size_t StorableFileSystemSize = MyFileSystem1.GetStorableFileSystemSize();
+  size_t StorableFileSystemSize = MyFileSystem1.GetStorableParamsSize();
 
   std::string ErrorString = "File System Size over limit("+std::to_string(k_acceptableFsSize)+"): " + std::to_string(StorableFileSystemSize);
 
@@ -106,7 +106,7 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
 
     RamFs CorrectlySizedFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
-    size_t FsSize = CorrectlySizedFileSystem.GetStorableFileSystemSize();
+    size_t FsSize = CorrectlySizedFileSystem.GetStorableParamsSize();
 
     RamFs TooSmallFileSystem(FsSize - 1, RamFileEmulator);
 
@@ -253,7 +253,7 @@ TEST_GROUP(TestFileWriteRead){
   }
 };
 
-  IGNORE_TEST(TestFileWriteRead, BasicWriteAndRead) {
+  TEST(TestFileWriteRead, BasicWriteAndRead) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     std::string filename = "file.txt";
@@ -264,14 +264,14 @@ TEST_GROUP(TestFileWriteRead){
     RamFs_Status read_status;
 
     uint8_t WriteData [] = {1,2,3,4,5,6,7};
-    uint8_t ReadData[sizeof(WriteData)];
+    uint8_t ReadData[sizeof(WriteData)] = {};
 
     MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
     write_status = pMyFile->Write(WriteData,sizeof(WriteData),t_creation+10);
 
     RamFs MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
     MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
-    read_status = pMyFile->Read(ReadData, sizeof(WriteData), 0);
+    read_status = pMyFile->Read(ReadData, pMyFile->GetSize(), 0);
 
     size_t free_size_after_writing = MyFileSystem.GetFreeSize();
     size_t file_size_after_writing = pMyFile->GetSize();
@@ -279,9 +279,12 @@ TEST_GROUP(TestFileWriteRead){
     CHECK(write_status == RamFs_Status::SUCCESS);
     CHECK(read_status == RamFs_Status::SUCCESS);
     CHECK(file_size_after_writing == sizeof(WriteData));
-    CHECK(free_size_after_writing == RamAccess::k_RamSize - sizeof(WriteData));
+    CHECK(free_size_after_writing == RamAccess::k_RamSize - MyFileSystem.GetStorableParamsSize() - sizeof(WriteData));
     MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));
   }
+
+    //make everything private, make them all friends
+    //separate source in three files
 
     //test 1 write is accessible correctly.
     //test 2nd write erases accordingly, and can be accessed correctly when loaded(?)
