@@ -31,16 +31,19 @@ class RamFsFile {
   RamFs_Status Write (const void* const pData, const size_t size, const Timestamp modif_time);
   RamFs_Status Read(const void* const pData, const size_t size, const size_t start_pos) const;
   size_t GetSize() const;
+  bool operator==(const RamFsFile& other) const;
 
  private:
-  Filename m_filename;
-  size_t m_fileSize;
-  Timestamp m_creationTimestamp;
-  bool m_isActive = false;
-  int m_ownedFragmentsIdxs[k_MaxFragmentPerFile] = {0};
-  int m_ownedFragmentsCount;
   RamFs* m_parentFs;
-  char dummy;
+  struct StorableFile{
+    Filename m_filename;
+    size_t m_fileSize;
+    Timestamp m_creationTimestamp;
+    bool m_isActive = false;
+    int m_ownedFragmentsIdxs[k_MaxFragmentPerFile] = {0};
+    int m_ownedFragmentsCount;
+    char dummy;
+  } m_storable_params;
 };
 
 class RamFsFragment{
@@ -51,6 +54,7 @@ class RamFsFragment{
   void Free();
   void Allocate(const size_t start, const size_t end);
   size_t GetStart() const;
+  bool operator==(const RamFsFragment& other) const;
  private:
   RamFsFragment() = default;
   ~RamFsFragment() = default;
