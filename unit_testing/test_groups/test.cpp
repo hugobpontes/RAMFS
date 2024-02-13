@@ -283,14 +283,13 @@ TEST_GROUP(TestFileWriteRead){
     MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));
   }
 
-    //make everything private, make them all friends
-    //separate source in three files
-
     //test 1 write is accessible correctly.
     //test 2nd write erases accordingly, and can be accessed correctly when loaded(?)
     //test writing to inexistent file
-    //test writing data size that doesnt fit, or file 0
+    //test writing data size that doesnt fit, or size 0
     //test invalid pointer
+    //test with multiple files
+    //test all return messages
 
     //test deletion, appending, etc..
     //test all return messages
@@ -298,6 +297,4 @@ TEST_GROUP(TestFileWriteRead){
 
     /* test that one can write to a file (TIMESTAMP,and variants) test that one can read from a file (and variants) test that one can get fs free size test that one can get file size test that one can get file timestamp test that one can get filename only when all of the above are done, do we think about appending,deleting and variants that require multiple fragments add feature to only store parts of the filesystem ->Add non default size test when structures are stable add doxygen comments*/
 
-    //make classes nested instead of friends
-
-    //change addressed to user defined type so user can control adress size
+    //change addressed to user defined type so user can control adress size (in general refactor int and size types)
