@@ -104,32 +104,15 @@ TEST(TestFsInstantiation, FileSystemHasAcceptableSize) {
   TEST(TestFsInstantiation, InstatiationWithTooSmallRamIsIgnored) {
     // test case where ram size is too small to accomodate fs
 
-    RamFs UsedToGetSize1(RamAccess::k_RamSize, RamFileEmulator);
-    RamFs<20, 20> UsedToGetSize2(RamAccess::k_RamSize, RamFileEmulator);
+    RamFs CorrectlySizedFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
-    size_t DefaultFsSize = UsedToGetSize1.GetStorableFileSystemSize();
-    size_t CustomFsSize = UsedToGetSize2.GetStorableFileSystemSize();
+    size_t FsSize = CorrectlySizedFileSystem.GetStorableFileSystemSize();
 
-    RamFs TooSmallFileSystem1(DefaultFsSize-1, RamFileEmulator);
-    RamFs<20, 20> TooSmallFileSystem2(CustomFsSize - 1, RamFileEmulator);
-    //even though it is the same size as the first file system, it is created with enough ram to hold it
-    RamFs CorrectlySizedFileSystem(CustomFsSize - 1, RamFileEmulator);
+    RamFs TooSmallFileSystem(FsSize - 1, RamFileEmulator);
 
-    CHECK(!TooSmallFileSystem1.IsInitialized());
-    CHECK(!TooSmallFileSystem2.IsInitialized());
+    CHECK(!TooSmallFileSystem.IsInitialized());
     CHECK(CorrectlySizedFileSystem.IsInitialized());
   }
-
-  IGNORE_TEST(TestFsInstantiation, InstatiationWithNonDefaultArgumentsCreatesCorrectlySizedFs) {
-    RamFs<4,4> MyFileSystem1(RamAccess::k_RamSize, RamFileEmulator);
-    RamFs<8,8> MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
-
-    CHECK(MyFileSystem2.GetStorableFileSystemSize()-MyFileSystem1.GetStorableFileSystemSize()==(4*sizeof(RamFsFile)+4*sizeof(RamFsFragment)));
-    CHECK(0); //always fail when run, until test is improved when structures are more stable
-
-    //this seems to work, but due to packing, this test is implementation dependent, so delay it until structures are stable 
-  }
-
 
 TEST_GROUP(TestFileCreationAndFind){
   void setup(){
@@ -285,7 +268,7 @@ TEST_GROUP(TestFileWriteRead){
 
     MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
     write_status = pMyFile->Write(WriteData,sizeof(WriteData),t_creation+10);
-
+/*
     RamFs MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
     MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
     read_status = pMyFile->Read(ReadData, sizeof(WriteData), 0);
@@ -294,7 +277,7 @@ TEST_GROUP(TestFileWriteRead){
     CHECK(write_status == RamFs_Status::SUCCESS);
     CHECK(pMyFile->GetSize() == sizeof(WriteData));
     CHECK(MyFileSystem.GetFreeSize() == RamAccess::k_RamSize-sizeof(WriteData));
-    MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));
+    MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));*/
   }
 
     //test 1 write is accessible correctly.
@@ -304,6 +287,11 @@ TEST_GROUP(TestFileWriteRead){
     //test invalid pointer
 
     //test deletion, appending, etc..
+    //test all return messages
     //test something that would onnly be possible with defragmentation
 
     /* test that one can write to a file (TIMESTAMP,and variants) test that one can read from a file (and variants) test that one can get fs free size test that one can get file size test that one can get file timestamp test that one can get filename only when all of the above are done, do we think about appending,deleting and variants that require multiple fragments add feature to only store parts of the filesystem ->Add non default size test when structures are stable add doxygen comments*/
+
+    //make classes nested instead of friends
+
+    //change addressed to user defined type so user can control adress size

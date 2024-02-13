@@ -14,6 +14,7 @@ set(SrcFiles RAMFS/RamAccess.cpp RAMFS/RamFs.cpp)
 set(TestFiles unit_testing/test_groups/test.cpp )
 
 add_executable(RAMFS_tests ${RunnerFile} ${TestFiles} ${SrcFiles})
+add_compile_definitions(g)
 
 target_link_libraries(RAMFS_tests PRIVATE
     CppUTest

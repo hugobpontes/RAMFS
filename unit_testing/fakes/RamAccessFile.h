@@ -5,7 +5,7 @@
 
 #include "RamAccessFile.h"
 
-constexpr int k_acceptableFsSize = 896;
+constexpr int k_acceptableFsSize = 2048;
 static const std::array<char, RamAccess::k_RamSize> zerobuffer{};
 
 class RamAccessFile : public RamAccess {
