@@ -11,11 +11,13 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size, const 
 
     //check args
     size_t owned_memory_size = 0;
+    size_t written_size = 0;
     while (owned_memory_size < size)
     {
-      int new_frag_idx;
+      int new_frag_idx = k_InvalidFragIdx;
       RamFsFragment* p_new_frag;
       if (m_storable_params.m_ownedFragmentsCount >= k_MaxFragmentPerFile) {
+        //this is actually just for append
         // set bad status
         break;
       }
@@ -33,24 +35,61 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size, const 
     if(1) //status success<//enough space to write
     for (int i = 0; i<m_storable_params.m_ownedFragmentsCount;i++){
       RamFsFragment* pFrag;
-      m_parentFs->m_ramAccess.RamWrite(pData,pFrag->GetSize(),pFrag->GetStart());
+      pFrag = m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]);
+      m_parentFs->m_ramAccess.RamWrite(static_cast<const char*>(pData)+written_size,pFrag->GetSize(),pFrag->GetStart());
+      written_size +=pFrag->GetSize();
     }
+    m_storable_params.m_fileSize = written_size;
     
     return RamFs_Status::SUCCESS; //return status var
 }
 
 
 RamFs_Status RamFsFile::Read(const void* const pData,
-                                                 const size_t size,
-                                                 const size_t start_pos) const {
-  // simple: go through owned frags and read into pData
+                              const size_t size,
+                              const size_t start_pos) const {
+
+  size_t read_size = 0;                              
+
+  if(0) { //check params and also check frags are appropriate
+
+  } else {
+    for (int i = 0; i<m_storable_params.m_ownedFragmentsCount;i++){
+      RamFsFragment* pFrag;
+      pFrag = m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]);
+      m_parentFs->m_ramAccess.RamWrite(static_cast<const char*>(pData)+read_size,pFrag->GetSize(),pFrag->GetStart());
+      read_size +=pFrag->GetSize();
+    }
+  }
   return RamFs_Status::SUCCESS;
 }
 
-
-size_t RamFsFile::GetSize() const {
-  return m_storable_params.m_fileSize;
+void RamFsFile::initializeCommon(const char* const& fname,const size_t fname_size, Timestamp creation_time) {
+  
+  memcpy(&(m_storable_params.m_filename),fname,fname_size);
+  m_storable_params.m_fileSize = 0;
+  m_storable_params.m_creationTimestamp = 0;
+  m_storable_params.m_isActive = false;
+  for (int i = 0; i<k_MaxFragmentPerFile;i++){
+    m_storable_params.m_ownedFragmentsIdxs[i]=0;
+  }
+  m_storable_params.m_ownedFragmentsCount = 0;
 }
+void RamFsFile::setActiveState(const bool state) {
+  m_storable_params.m_isActive = state;
+}
+void RamFsFile::initialize(const char* const& fname,
+                           const size_t fname_size,
+                           const Timestamp creation_time) {
+  initializeCommon(fname,fname_size,creation_time);
+}
+
+void RamFsFile::initialize() {
+  char emptyFilename[k_MaxFilenameSize] = {};
+  initializeCommon(emptyFilename, k_MaxFilenameSize, 0);
+}
+
+size_t RamFsFile::GetSize() const { return m_storable_params.m_fileSize; }
 
 bool RamFsFile::operator == (const RamFsFile& other) const {
   return !memcmp(&m_storable_params,&(other.m_storable_params),sizeof(m_storable_params));
@@ -62,14 +101,26 @@ void RamFs::SetFilesParent() {
   }
 }
 
+void RamFs::initialize(const size_t ramSize){
+      m_FSys.m_ramSize = ramSize;
+      m_FSys.m_freeSize = ramSize - sizeof(m_FSys);
+      m_FSys.m_FileCount = 0;
+      for (int i = 0; i < k_FileNr; i++) {
+        m_FSys.m_Files[i].initialize();
+      }
+      for (int i = 0; i < k_FileNr; i++) {
+        m_FSys.m_Fragments[i].initialize();
+      }
+
+}
+
 RamFs::RamFs(const size_t ramSize, const RamAccess& RamAccess)
     : m_ramAccess(RamAccess) {
   if (ramSize <= RamAccess::k_RamSize && ramSize >= sizeof(m_FSys)) {
     LoadFsFromRam();
     SetFilesParent();
     if (!CheckFileSystem() || m_FSys.m_ramSize != ramSize) {
-      m_FSys.m_ramSize = ramSize;
-      m_FSys.m_freeSize = ramSize - sizeof(m_FSys);
+      initialize(ramSize);
       StoreFsInRam();
     } else {
       m_wasLoaded = true;
@@ -165,9 +216,8 @@ RamFs_Status RamFs::CreateFile(const char* const& fname, RamFsFile*& pFile,
       for (int i = 0; i < k_FileNr; i++) {
         if (m_FSys.m_Files[i].m_storable_params.m_isActive == false) {
           /*Found free file slot, initialize new file*/
-          memcpy(&(m_FSys.m_Files[i].m_storable_params.m_filename), fname, filename_length);
-          m_FSys.m_Files[i].m_storable_params.m_creationTimestamp = creation_time;
-          m_FSys.m_Files[i].m_storable_params.m_isActive = true;
+          m_FSys.m_Files[i].initialize(fname,filename_length,creation_time);
+          m_FSys.m_Files[i].setActiveState(true);
           m_FSys.m_FileCount++;
 
           pFile = &(m_FSys.m_Files[i]);
@@ -261,6 +311,12 @@ RamFsFragment* RamFs::GetFragmentAt(const size_t index) {
 
 size_t RamFsFragment::GetSize() const{
   return (m_end-m_start>=0) ? m_end-m_start : 0; 
+}
+
+void RamFsFragment::initialize() {
+  m_start = 0;
+  m_end = 0;
+  m_isFree = true;
 }
 
 size_t RamFsFragment::GetStart() const {

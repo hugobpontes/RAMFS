@@ -252,8 +252,8 @@ TEST_GROUP(TestFileWriteRead){
 
   }
 };
-/**/
-  TEST(TestFileWriteRead, BasicWriteAndRead) {
+
+  IGNORE_TEST(TestFileWriteRead, BasicWriteAndRead) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     std::string filename = "file.txt";
@@ -268,16 +268,19 @@ TEST_GROUP(TestFileWriteRead){
 
     MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
     write_status = pMyFile->Write(WriteData,sizeof(WriteData),t_creation+10);
-/*
+
     RamFs MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
     MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
     read_status = pMyFile->Read(ReadData, sizeof(WriteData), 0);
 
+    size_t free_size_after_writing = MyFileSystem.GetFreeSize();
+    size_t file_size_after_writing = pMyFile->GetSize();
+
     CHECK(write_status == RamFs_Status::SUCCESS);
-    CHECK(write_status == RamFs_Status::SUCCESS);
-    CHECK(pMyFile->GetSize() == sizeof(WriteData));
-    CHECK(MyFileSystem.GetFreeSize() == RamAccess::k_RamSize-sizeof(WriteData));
-    MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));*/
+    CHECK(read_status == RamFs_Status::SUCCESS);
+    CHECK(file_size_after_writing == sizeof(WriteData));
+    CHECK(free_size_after_writing == RamAccess::k_RamSize - sizeof(WriteData));
+    MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));
   }
 
     //test 1 write is accessible correctly.

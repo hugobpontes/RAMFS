@@ -32,8 +32,15 @@ class RamFsFile {
   RamFs_Status Read(const void* const pData, const size_t size, const size_t start_pos) const;
   size_t GetSize() const;
   bool operator==(const RamFsFile& other) const;
+  void initializeCommon(const char* const& fname, const size_t fname_size,Timestamp creation_time);
+  void initialize(const char* const& fname, const size_t fname_size,const Timestamp creation_time);
+  void initialize();
+  void setActiveState(const bool state);
 
- private:
+  private : 
+  RamFsFile() = default;
+  ~RamFsFile() = default;
+
   RamFs* m_parentFs;
   struct StorableFile{
     Filename m_filename;
@@ -55,6 +62,7 @@ class RamFsFragment{
   void Allocate(const size_t start, const size_t end);
   size_t GetStart() const;
   bool operator==(const RamFsFragment& other) const;
+  void initialize();
  private:
   RamFsFragment() = default;
   ~RamFsFragment() = default;
@@ -92,16 +100,17 @@ class RamFs {
   void FindFreeMemoryBlock(size_t& start, size_t& size) const ;
   const RamFsFragment* GetRightmostFrag(const size_t rightmost_search_address) const;
   void SetFilesParent();
+  void initialize(const size_t ramSize);
 
   bool m_wasLoaded = false;
   bool m_isInitialized = false;
 
   struct StorableFileSystem {
-    size_t m_freeSize = 0;
-    size_t m_ramSize = 0;
+    size_t m_freeSize;
+    size_t m_ramSize;
     RamFsFragment m_Fragments[k_FragmentNr] {};
     RamFsFile m_Files[k_FileNr]{};
-    unsigned short m_FileCount = 0;
+    unsigned short m_FileCount;
   } m_FSys;
 };
 
