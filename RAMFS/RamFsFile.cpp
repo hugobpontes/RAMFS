@@ -44,6 +44,7 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
     }
   m_storable_params.m_fileSize = written_size;
   m_parentFs->IncrementFreeSize(-written_size);
+  m_parentFs->StoreFileInRam(this);
 
   return RamFs_Status::SUCCESS;  // return status var
 }

@@ -50,43 +50,51 @@ size_t RamFs::GetStorableParamsSize() const { return sizeof(m_storable_params); 
 
 void RamFs::LoadFsFromRam() { 
   //TO DO: Dont read pointers
-  m_ramAccess.RamRead(&m_storable_params, sizeof(m_storable_params), 0); }
-
-void RamFs::StoreFsInRam() const {
-  //TO-DO: Dont write pointers
-  // TODO: Add selective write, maybe in a different function, so not all fs is
-  // re-written in ram everytime a byte is written
-  m_ramAccess.RamWrite(&m_storable_params, sizeof(m_storable_params), 0);
+  m_ramAccess.RamRead(&m_storable_params, sizeof(m_storable_params), 0); 
 }
 
-bool RamFs::CheckFileSystem() const {
-  return (m_storable_params.m_freeSize <= m_storable_params.m_ramSize - sizeof(m_storable_params));
-  /*For now this is the only way to check a correct load, consider adding a
-   * signature if nothing else coomes to mind later*/
+void RamFs::StoreFileInRam(RamFsFile* pFile) const {
+  //figure out how to write only the file
+  StoreFsInRam();
 }
-
-bool RamFs::operator==(const RamFs& other) const {
-  bool filesMatch = true;
-  bool fragmentsMatch = true;
-
-  for (int i = 0; i<k_FileNr;i++){
-    if (!(m_storable_params.m_Files[i] == other.m_storable_params.m_Files[i])) {
-      filesMatch = false;
-      break;
-    }
+  void RamFs::StoreFsInRam() const {
+    // TO-DO: Dont write pointers
+    //  TODO: Add selective write, maybe in a different function, so not all fs
+    //  is re-written in ram everytime a byte is written
+    m_ramAccess.RamWrite(&m_storable_params, sizeof(m_storable_params), 0);
   }
 
-  for (int i = 0; i < k_FragmentNr; i++) {
-    if (!(m_storable_params.m_Fragments[i] == other.m_storable_params.m_Fragments[i])) {
-      fragmentsMatch = false;
-      break;
-    }
+  bool RamFs::CheckFileSystem() const {
+    return (m_storable_params.m_freeSize <=
+            m_storable_params.m_ramSize - sizeof(m_storable_params));
+    /*For now this is the only way to check a correct load, consider adding a
+     * signature if nothing else coomes to mind later*/
   }
-  return (filesMatch &&
-          fragmentsMatch &&
-          m_storable_params.m_freeSize == other.m_storable_params.m_freeSize &&
-          m_storable_params.m_ramSize == other.m_storable_params.m_ramSize &&
-          m_storable_params.m_FileCount == other.m_storable_params.m_FileCount);
+
+  bool RamFs::operator==(const RamFs& other) const {
+    bool filesMatch = true;
+    bool fragmentsMatch = true;
+
+    for (int i = 0; i < k_FileNr; i++) {
+      if (!(m_storable_params.m_Files[i] ==
+            other.m_storable_params.m_Files[i])) {
+        filesMatch = false;
+        break;
+      }
+    }
+
+    for (int i = 0; i < k_FragmentNr; i++) {
+      if (!(m_storable_params.m_Fragments[i] ==
+            other.m_storable_params.m_Fragments[i])) {
+        fragmentsMatch = false;
+        break;
+      }
+    }
+    return (
+        filesMatch && fragmentsMatch &&
+        m_storable_params.m_freeSize == other.m_storable_params.m_freeSize &&
+        m_storable_params.m_ramSize == other.m_storable_params.m_ramSize &&
+        m_storable_params.m_FileCount == other.m_storable_params.m_FileCount);
   }
 
 void RamFs::_TempFileEdit_() {
@@ -178,6 +186,7 @@ void RamFs::FindFreeMemoryBlock(size_t& start, size_t& size) const {
   block_start = pRightmostFrag->m_end;
   if (block_start !=
       0) {  // if there is no fragment allocated, everything is a free block
+      //also should not be checking for 0 but for usable start 
     while (block_start == block_end) {
       block_end = pRightmostFrag->m_start;
       pRightmostFrag = GetRightmostFrag(block_end);

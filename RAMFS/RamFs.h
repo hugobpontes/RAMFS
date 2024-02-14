@@ -87,9 +87,9 @@ class RamFs {
   RamFs_Status CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp creation_time);
   RamFs_Status FindFile(const char* const& fname, RamFsFile*& pFile);
   unsigned short GetFileCount() const;
+  void StoreFileInRam(RamFsFile* pFile) const;
 
- private:
-  RamFs() = default;
+  private : RamFs() = default;
   void LoadFsFromRam();
   void StoreFsInRam() const;
   bool CheckFileSystem() const;

@@ -268,19 +268,60 @@ TEST_GROUP(TestFileWriteRead){
 
     MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
     write_status = pMyFile->Write(WriteData,sizeof(WriteData),t_creation+10);
-
-    RamFs MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
-    MyFileSystem.CreateFile(filename.data(), pMyFile, t_creation);
-    read_status = pMyFile->Read(ReadData, pMyFile->GetSize(), 0);
-
     size_t free_size_after_writing = MyFileSystem.GetFreeSize();
     size_t file_size_after_writing = pMyFile->GetSize();
+
+    RamFs MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
+    MyFileSystem2.FindFile(filename.data(), pMyFile);
+    read_status = pMyFile->Read(ReadData, pMyFile->GetSize(), 0);
 
     CHECK(write_status == RamFs_Status::SUCCESS);
     CHECK(read_status == RamFs_Status::SUCCESS);
     CHECK(file_size_after_writing == sizeof(WriteData));
     CHECK(free_size_after_writing == RamAccess::k_RamSize - MyFileSystem.GetStorableParamsSize() - sizeof(WriteData));
     MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));
+  }
+
+    IGNORE_TEST(TestFileWriteRead, MultipleWriteAndRead) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    std::string filename1 = "file1.txt";
+    std::string filename2 = "file2.txt";
+    Timestamp t_creation1 = 100;
+    Timestamp t_creation2 = 200;
+
+    RamFsFile* pMyFile1;
+    RamFsFile* pMyFile2;
+    RamFsFile* pMyFile3;
+    RamFsFile* pMyFile4;
+    RamFs_Status write_status1;
+    RamFs_Status read_status1;
+    RamFs_Status write_status2;
+    RamFs_Status read_status2;
+
+    /*
+
+    uint8_t WriteData1 [] = {1,2,3,4,5,6,7};
+    uint8_t WriteData2 [] = {7,6,5,4,3,2,1};
+    uint8_t ReadData1[sizeof(WriteData1)] = {};
+    uint8_t ReadData1[sizeof(WriteData2)] = {};
+
+    MyFileSystem.CreateFile(filename1.data(), pMyFile1, t_creation);
+    write_status1 = pMyFile1->Write(WriteData1,sizeof(WriteData1),t_creation+10);
+    size_t free_size_after_writing1 = MyFileSystem.GetFreeSize();
+        size_t file_size_after_writing = pMyFile1->GetSize();
+
+    RamFs MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
+    MyFileSystem.CreateFile(filename1.data(), pMyFile2, t_creation);
+    read_status1 = pMyFile2->Read(ReadData1, pMyFile2->GetSize(), 0);
+
+
+
+    CHECK(write_status == RamFs_Status::SUCCESS);
+    CHECK(read_status == RamFs_Status::SUCCESS);
+    CHECK(file_size_after_writing == sizeof(WriteData));
+    CHECK(free_size_after_writing == RamAccess::k_RamSize - MyFileSystem.GetStorableParamsSize() - sizeof(WriteData));
+    MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));*/
   }
 
     //test 1 write is accessible correctly.
