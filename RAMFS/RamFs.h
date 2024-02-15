@@ -18,7 +18,6 @@ using Timestamp = unsigned long;
 enum class RamFs_Status {
   SUCCESS,
   INVALID_FILENAME,
-  FILENAME_ALREADY_EXISTS,
   FILE_SLOTS_FULL,
   FILE_NOT_FOUND,
 };
@@ -74,13 +73,14 @@ class RamFsFragment{
   size_t m_start;
   size_t m_end;
   bool m_isFree = true;
-  
+  RamFs* m_parentFs;
 };
 
 class RamFs {
  
  public:
   friend class RamFsFile;
+  friend class RamFsFragment;
   RamFs(const size_t ramSize, const RamAccess& RamAccess);
   bool operator==(const RamFs& other) const;
   size_t GetUsableSize() const;
@@ -92,6 +92,7 @@ class RamFs {
   RamFs_Status CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp creation_time);
   RamFs_Status FindFile(const char* const& fname, RamFsFile*& pFile);
   unsigned short GetFileCount() const;
+  unsigned short GetTakenFragsCount() const;
   void StoreFileInRam(RamFsFile* pFile) const;
 
   private : RamFs() = default;
@@ -99,11 +100,11 @@ class RamFs {
   void StoreFsInRam() const;
   bool CheckFileSystem() const;
   int FindFreeFragmentSlot() const;
-  void FindFreeMemoryBlock(size_t& start, size_t& size) const ;
-  const RamFsFragment* GetRightmostFrag(const size_t rightmost_search_address) const;
-  void SetFilesParent();
+  void FindFreeMemoryArea(const size_t requested_size,size_t& start, size_t& end) const;
+  const RamFsFragment* GetFragEndingClosestTo(const size_t location) const;
+  void SetParents();
   void initialize(const size_t ramSize);
-  RamFsFragment* AllocateNewFragment(const size_t size, int& index);
+  int AllocateNewFragment(const size_t size);
   RamFsFragment* GetFragmentAt(const size_t index);
   void IncrementFreeSize(const int increment);
 
@@ -117,6 +118,7 @@ class RamFs {
     RamFsFragment m_Fragments[k_FragmentNr] {};
     RamFsFile m_Files[k_FileNr]{};
     unsigned short m_FileCount;
+    unsigned short m_FragCount;
   } m_storable_params;
 };
 

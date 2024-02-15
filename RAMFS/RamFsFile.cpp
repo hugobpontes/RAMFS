@@ -30,7 +30,7 @@ RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
       break;
     }
 
-    p_new_frag = m_parentFs->AllocateNewFragment(size, new_frag_idx);
+    new_frag_idx = m_parentFs->AllocateNewFragment(size);
 
     if (new_frag_idx == k_InvalidFragIdx || p_new_frag == nullptr) {
       // set bad status
@@ -38,6 +38,7 @@ RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
     }
     m_storable_params.m_ownedFragmentsIdxs[m_storable_params.m_ownedFragmentsCount] = new_frag_idx;
     m_storable_params.m_ownedFragmentsCount++;
+    p_new_frag = m_parentFs->GetFragmentAt(new_frag_idx);
     owned_memory_size += p_new_frag->GetSize();
   }
   return status;

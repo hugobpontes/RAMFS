@@ -7,9 +7,12 @@ void RamFs::IncrementFreeSize(const int increment) {
   m_storable_params.m_freeSize+=increment;
 }
 
-void RamFs::SetFilesParent() {
+void RamFs::SetParents() {
   for (int i = 0; i < k_FileNr; i++) {
     m_storable_params.m_Files[i].m_parentFs = this;
+  }
+  for (int i = 0; i < k_FragmentNr; i++) {
+    m_storable_params.m_Fragments[i].m_parentFs = this;
   }
 }
 
@@ -30,7 +33,7 @@ RamFs::RamFs(const size_t ramSize, const RamAccess& RamAccess)
     : m_ramAccess(RamAccess) {
   if (ramSize <= RamAccess::k_RamSize && ramSize >= sizeof(m_storable_params)) {
     LoadFsFromRam();
-    SetFilesParent();
+    SetParents();
     if (!CheckFileSystem() || m_storable_params.m_ramSize != ramSize) {
       initialize(ramSize);
       StoreFsInRam();
@@ -67,7 +70,7 @@ void RamFs::StoreFileInRam(RamFsFile* pFile) const {
   bool RamFs::CheckFileSystem() const {
     return (m_storable_params.m_freeSize <=
             m_storable_params.m_ramSize - sizeof(m_storable_params));
-    /*For now this is the only way to check a correct load, consider adding a
+    /*TODO: For now this is the only way to check a correct load, consider adding a
      * signature if nothing else coomes to mind later*/
   }
 
@@ -94,7 +97,8 @@ void RamFs::StoreFileInRam(RamFsFile* pFile) const {
         filesMatch && fragmentsMatch &&
         m_storable_params.m_freeSize == other.m_storable_params.m_freeSize &&
         m_storable_params.m_ramSize == other.m_storable_params.m_ramSize &&
-        m_storable_params.m_FileCount == other.m_storable_params.m_FileCount);
+        m_storable_params.m_FileCount == other.m_storable_params.m_FileCount &&
+        m_storable_params.m_FragCount == other.m_storable_params.m_FragCount);
   }
 
 void RamFs::_TempFileEdit_() {
@@ -177,23 +181,78 @@ int RamFs::FindFreeFragmentSlot() const {
   return found_slot;
 }
 
+void RamFs::FindFreeMemoryArea(const size_t requested_size, size_t& start, size_t& end) const {
 
-void RamFs::FindFreeMemoryBlock(size_t& start, size_t& size) const {
-  size_t block_start = m_storable_params.m_ramSize;
-  size_t block_end = m_storable_params.m_ramSize;
-  const RamFsFragment* pRightmostFrag = GetRightmostFrag(block_end);
-  // check nullptr, return ram sizes if
-  block_start = pRightmostFrag->m_end;
-  if (block_start !=
-      0) {  // if there is no fragment allocated, everything is a free block
-      //also should not be checking for 0 but for usable start 
-    while (block_start == block_end) {
-      block_end = pRightmostFrag->m_start;
-      pRightmostFrag = GetRightmostFrag(block_end);
-      block_start = pRightmostFrag->m_end;
+  /*Finding logic is as follows: if there is at least one fragment taken, we will have to look
+  for a free area, so we start by finding the fragment closest to the end of RAM. When that is found,
+  we check that between the end of that fragment and the end of RAM, there is enough space for a new fragment.
+  If there is, the while loop never starts. If there isnt we look in the space between that fragment and the previous one
+  If not enough space is ever found, the largest possible area is returned */
+
+
+  /*block locations if number of allocated fragments is 0*/
+  size_t best_block_start = RamFs::GetStorableParamsSize();
+  size_t best_block_end = best_block_start+requested_size;
+
+  const RamFsFragment* pClosestFrag;
+
+  if (m_storable_params.m_FragCount != 0){
+    
+    size_t current_block_start = 0;
+    size_t current_block_end = 0;
+
+    pClosestFrag = GetFragEndingClosestTo(m_storable_params.m_ramSize);
+    current_block_end = m_storable_params.m_ramSize;
+    current_block_start = pClosestFrag->m_end < current_block_end-requested_size?current_block_end-requested_size:pClosestFrag->m_end;
+    best_block_start = current_block_start;
+    best_block_end = current_block_end;
+
+    while ((current_block_end - current_block_start) < requested_size) {
+      current_block_end = pClosestFrag->m_start;
+      pClosestFrag = GetFragEndingClosestTo(current_block_end);
+      current_block_start = pClosestFrag->m_end < current_block_end-requested_size?current_block_end-requested_size:pClosestFrag->m_end;
+      if ((current_block_end - current_block_start) > (best_block_end - best_block_start)) {
+        best_block_start = current_block_start;
+        best_block_end = current_block_end;
+      }
     }
-  }
-  start = block_start;
-  size = block_end - block_start;
+  } 
+
+  start = best_block_start;
+  end = best_block_end;
 }
 
+int RamFs::AllocateNewFragment(const size_t size) {
+  int allocatedFragmentIdx = k_InvalidFragIdx;
+
+  size_t frag_start = 0;
+  size_t frag_end = 0;
+
+  if (m_storable_params.m_freeSize > 0) {
+    allocatedFragmentIdx = FindFreeFragmentSlot();
+    if (allocatedFragmentIdx != k_InvalidFragIdx) {
+      FindFreeMemoryArea(size, frag_start, frag_end);
+      m_storable_params.m_Fragments[allocatedFragmentIdx].Allocate(frag_start,frag_end);
+      allocatedFragmentIdx = allocatedFragmentIdx;
+      m_storable_params.m_FragCount++;
+    }
+  }
+
+  return allocatedFragmentIdx;
+}
+
+const RamFsFragment* RamFs::GetFragEndingClosestTo(const size_t location) const {
+  // can be improved if we use ordered pointers to frags
+  int closest_frag_idx = 0;
+  for (int i = 1; i < k_FragmentNr; i++) {
+    size_t candidate_end = m_storable_params.m_Fragments[i].m_end;
+    if ((candidate_end <= location) && (candidate_end > m_storable_params.m_Fragments[closest_frag_idx].m_end)) {
+      closest_frag_idx = i;
+    }
+  }
+  return &(m_storable_params.m_Fragments[closest_frag_idx]);
+}
+
+unsigned short RamFs::GetTakenFragsCount() const {
+  return m_storable_params.m_FragCount;
+}
