@@ -66,59 +66,66 @@ class RamFsFragment{
   size_t GetSize() const;
   void Free();
   void Allocate(const size_t start, const size_t end);
-  size_t GetStart() const;  bool operator==(const RamFsFragment& other) const;
+  size_t GetStart() const;
+  size_t GetEnd() const;
+  bool operator==(const RamFsFragment& other) const;
   void initialize();
   RamFsFragment() = default;
   ~RamFsFragment() = default;
-  size_t m_start;
-  size_t m_end;
-  bool m_isFree = true;
+
   RamFs* m_parentFs;
+  struct StorableFileSystem {
+    size_t m_start;
+    size_t m_end;
+    bool m_isFree = true;    
+  } m_storable_params;
 };
 
-class RamFs {
- 
- public:
-  friend class RamFsFile;
-  friend class RamFsFragment;
-  RamFs(const size_t ramSize, const RamAccess& RamAccess);
-  bool operator==(const RamFs& other) const;
-  size_t GetUsableSize() const;
-  size_t GetFreeSize() const;
-  static size_t GetStorableParamsSize();
-  void _TempFileEdit_();
-  bool WasLoaded() const;
-  bool IsInitialized() const;
-  RamFs_Status CreateFile(const char* const& fname, RamFsFile*& pFile, const Timestamp creation_time);
-  RamFs_Status FindFile(const char* const& fname, RamFsFile*& pFile);
-  unsigned short GetFileCount() const;
-  unsigned short GetTakenFragsCount() const;
-  void StoreFileInRam(RamFsFile* pFile) const;
+  class RamFs {
+   public:
+    friend class RamFsFile;
+    friend class RamFsFragment;
+    RamFs(const size_t ramSize, const RamAccess& RamAccess);
+    bool operator==(const RamFs& other) const;
+    size_t GetUsableSize() const;
+    size_t GetFreeSize() const;
+    static size_t GetStorableParamsSize();
+    void _TempFileEdit_();
+    bool WasLoaded() const;
+    bool IsInitialized() const;
+    RamFs_Status CreateFile(const char* const& fname, RamFsFile*& pFile,
+                            const Timestamp creation_time);
+    RamFs_Status FindFile(const char* const& fname, RamFsFile*& pFile);
+    unsigned short GetFileCount() const;
+    unsigned short GetTakenFragsCount() const;
+    void StoreFileInRam(RamFsFile* pFile) const;
 
-  private : RamFs() = default;
-  void LoadFsFromRam();
-  void StoreFsInRam() const;
-  bool CheckFileSystem() const;
-  int FindFreeFragmentSlot() const;
-  void FindFreeMemoryArea(const size_t requested_size,size_t& start, size_t& end) const;
-  const RamFsFragment* GetFragEndingClosestTo(const size_t location) const;
-  void SetParents();
-  void initialize(const size_t ramSize);
-  int AllocateNewFragment(const size_t size);
-  RamFsFragment* GetFragmentAt(const size_t index);
-  void IncrementFreeSize(const int increment);
+   private:
+    RamFs() = default;
+    void LoadFsFromRam();
+    void StoreFsInRam() const;
+    bool CheckFileSystem() const;
+    int FindFreeFragmentSlot() const;
+    void FindFreeMemoryArea(const size_t requested_size, size_t& start,
+                            size_t& end) const;
+    const RamFsFragment* GetFragEndingClosestTo(const size_t location) const;
+    void SetParents();
+    void initialize(const size_t ramSize);
+    int AllocateNewFragment(const size_t size);
+    RamFsFragment* GetFragmentAt(const size_t index);
+    void IncrementFreeSize(const int increment);
 
-  const RamAccess& m_ramAccess;
-  bool m_wasLoaded = false;
-  bool m_isInitialized = false;
+    const RamAccess& m_ramAccess;
+    bool m_wasLoaded = false;
+    bool m_isInitialized = false;
 
-  struct StorableFileSystem {
-    size_t m_freeSize;
-    size_t m_ramSize;
-    RamFsFragment m_Fragments[k_FragmentNr] {};
-    RamFsFile m_Files[k_FileNr]{};
-    unsigned short m_FileCount;
-    unsigned short m_FragCount;
-  } m_storable_params;
+    struct StorableFileSystem {
+      size_t m_freeSize;
+      size_t m_ramSize;
+      RamFsFragment m_Fragments[k_FragmentNr]{};
+      RamFsFile m_Files[k_FileNr]{};
+      unsigned short m_FileCount;
+      unsigned short m_FragCount;
+    } m_storable_params;
 };
 

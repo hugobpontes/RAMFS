@@ -173,7 +173,7 @@ unsigned short RamFs::GetFileCount() const { return m_storable_params.m_FileCoun
 int RamFs::FindFreeFragmentSlot() const {
   int found_slot = k_InvalidFragIdx;
   for (int i = 0; i < k_FragmentNr; i++) {
-    if (m_storable_params.m_Fragments[i].m_isFree) {
+    if (m_storable_params.m_Fragments[i].m_storable_params.m_isFree) {
       found_slot = i;
       break;
     }
@@ -203,14 +203,14 @@ void RamFs::FindFreeMemoryArea(const size_t requested_size, size_t& start, size_
 
     pClosestFrag = GetFragEndingClosestTo(m_storable_params.m_ramSize);
     current_block_end = m_storable_params.m_ramSize;
-    current_block_start = pClosestFrag->m_end < current_block_end-requested_size?current_block_end-requested_size:pClosestFrag->m_end;
+    current_block_start = pClosestFrag->GetEnd() < current_block_end-requested_size?current_block_end-requested_size:pClosestFrag->GetEnd();
     best_block_start = current_block_start;
     best_block_end = current_block_end;
 
     while ((current_block_end - current_block_start) < requested_size) {
-      current_block_end = pClosestFrag->m_start;
+      current_block_end = pClosestFrag->GetStart();
       pClosestFrag = GetFragEndingClosestTo(current_block_end);
-      current_block_start = pClosestFrag->m_end < current_block_end-requested_size?current_block_end-requested_size:pClosestFrag->m_end;
+      current_block_start = pClosestFrag->GetEnd() < current_block_end-requested_size?current_block_end-requested_size:pClosestFrag->GetEnd();
       if ((current_block_end - current_block_start) > (best_block_end - best_block_start)) {
         best_block_start = current_block_start;
         best_block_end = current_block_end;
@@ -245,8 +245,8 @@ const RamFsFragment* RamFs::GetFragEndingClosestTo(const size_t location) const 
   // can be improved if we use ordered pointers to frags
   int closest_frag_idx = 0;
   for (int i = 1; i < k_FragmentNr; i++) {
-    size_t candidate_end = m_storable_params.m_Fragments[i].m_end;
-    if ((candidate_end <= location) && (candidate_end > m_storable_params.m_Fragments[closest_frag_idx].m_end)) {
+    size_t candidate_end = m_storable_params.m_Fragments[i].GetEnd();
+    if ((candidate_end <= location) && (candidate_end > m_storable_params.m_Fragments[closest_frag_idx].GetEnd())) {
       closest_frag_idx = i;
     }
   }
