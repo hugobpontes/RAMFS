@@ -21,7 +21,7 @@ void RamFs::initialize(const size_t ramSize){
         m_storable_params.m_Files[i].initialize();
       }
       for (int i = 0; i < k_FileNr; i++) {
-        m_storable_params.m_Fragments[i].initialize(sizeof(m_storable_params));
+        m_storable_params.m_Fragments[i].initialize();
       }
 
 }
@@ -46,7 +46,7 @@ size_t RamFs::GetUsableSize() const {
 
 size_t RamFs::GetFreeSize() const { return m_storable_params.m_freeSize; }
 
-size_t RamFs::GetStorableParamsSize() const { return sizeof(m_storable_params); }
+size_t RamFs::GetStorableParamsSize() { return sizeof(StorableFileSystem); }
 
 void RamFs::LoadFsFromRam() { 
   //TO DO: Dont read pointers

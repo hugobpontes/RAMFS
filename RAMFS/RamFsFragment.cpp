@@ -31,9 +31,9 @@ size_t RamFsFragment::GetSize() const {
   return (m_end - m_start >= 0) ? m_end - m_start : 0;
 }
 
-void RamFsFragment::initialize(const size_t default_position) {
-  m_start = default_position;
-  m_end = default_position;
+void RamFsFragment::initialize() {
+  m_start = RamFs::GetStorableParamsSize();
+  m_end = RamFs::GetStorableParamsSize();
   m_isFree = true;
 }
 
@@ -42,6 +42,7 @@ size_t RamFsFragment::GetStart() const { return m_start; }
 void RamFsFragment::Allocate(const size_t start, const size_t end) {
   m_start = start;
   m_end = end;
+  m_isFree = false;
 }
 
 RamFsFragment* RamFs::AllocateNewFragment(const size_t size, int& index) {

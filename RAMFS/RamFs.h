@@ -18,6 +18,7 @@ using Timestamp = unsigned long;
 enum class RamFs_Status {
   SUCCESS,
   INVALID_FILENAME,
+  FILENAME_ALREADY_EXISTS,
   FILE_SLOTS_FULL,
   FILE_NOT_FOUND,
 };
@@ -28,6 +29,7 @@ class RamFsFile {
  public:
   friend class RamFs;
   Timestamp GetCreationTimestamp() const;
+  Timestamp GetModificationTimestamp() const;
   RamFs_Status Write (const void* const pData, const size_t size, const Timestamp modif_time);
   RamFs_Status Read(void* const pData, const size_t size, const size_t start_pos) const;
   size_t GetSize() const;
@@ -39,12 +41,15 @@ class RamFsFile {
   void initialize(const char* const& fname, const size_t fname_size,const Timestamp creation_time);
   void initialize();
   void setActiveState(const bool state);
+  void FreeOwnedFragments();
+  RamFs_Status TakeHoldOfRequiredFragments(const size_t size);
 
-  RamFs* m_parentFs;
+      RamFs* m_parentFs;
   struct StorableFile{
     Filename m_filename;
     size_t m_fileSize;
     Timestamp m_creationTimestamp;
+    Timestamp m_modifTimestamp;
     bool m_isActive = false;
     int m_ownedFragmentsIdxs[k_MaxFragmentPerFile] = {0};
     int m_ownedFragmentsCount;
@@ -63,7 +68,7 @@ class RamFsFragment{
   void Free();
   void Allocate(const size_t start, const size_t end);
   size_t GetStart() const;  bool operator==(const RamFsFragment& other) const;
-  void initialize(const size_t default_position);
+  void initialize();
   RamFsFragment() = default;
   ~RamFsFragment() = default;
   size_t m_start;
@@ -80,7 +85,7 @@ class RamFs {
   bool operator==(const RamFs& other) const;
   size_t GetUsableSize() const;
   size_t GetFreeSize() const;
-  size_t GetStorableParamsSize() const;
+  static size_t GetStorableParamsSize();
   void _TempFileEdit_();
   bool WasLoaded() const;
   bool IsInitialized() const;
