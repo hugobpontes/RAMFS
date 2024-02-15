@@ -181,6 +181,23 @@ int RamFs::FindFreeFragmentSlot() const {
   return found_slot;
 }
 
+size_t RamFs::GetBlockStart(const size_t end_of_closest_frag, const size_t requested_size, const size_t block_end) const {
+  
+  size_t block_start;
+  
+  if (end_of_closest_frag == block_end){
+    block_start = block_end;
+  } else {
+    if (end_of_closest_frag + 1 + requested_size <= block_end) {
+      block_start = block_end - requested_size;
+    } else {
+      block_start = end_of_closest_frag + 1;
+    }
+  }
+
+  return block_start;
+}
+
 void RamFs::FindFreeMemoryArea(const size_t requested_size, size_t& start, size_t& end) const {
 
   /*Finding logic is as follows: if there is at least one fragment taken, we will have to look
@@ -191,29 +208,39 @@ void RamFs::FindFreeMemoryArea(const size_t requested_size, size_t& start, size_
 
 
   /*block locations if number of allocated fragments is 0*/
-  size_t best_block_start = RamFs::GetStorableParamsSize();
-  size_t best_block_end = best_block_start+requested_size;
 
-  const RamFsFragment* pClosestFrag;
+  const size_t init_block_end = m_storable_params.m_ramSize - 1;
+  const size_t init_block_start = init_block_end - requested_size;
+  size_t best_block_end = init_block_end;
+  size_t best_block_start = init_block_start;
+
+  const RamFsFragment * pClosestFrag;
 
   if (m_storable_params.m_FragCount != 0){
     
-    size_t current_block_start = 0;
-    size_t current_block_end = 0;
+    size_t tentative_block_start = 0;
+    size_t tentative_block_end = 0;
 
-    pClosestFrag = GetFragEndingClosestTo(m_storable_params.m_ramSize);
-    current_block_end = m_storable_params.m_ramSize;
-    current_block_start = pClosestFrag->GetEnd() < current_block_end-requested_size?current_block_end-requested_size:pClosestFrag->GetEnd();
-    best_block_start = current_block_start;
-    best_block_end = current_block_end;
+    tentative_block_end = init_block_end;
 
-    while ((current_block_end - current_block_start) < requested_size) {
-      current_block_end = pClosestFrag->GetStart();
-      pClosestFrag = GetFragEndingClosestTo(current_block_end);
-      current_block_start = pClosestFrag->GetEnd() < current_block_end-requested_size?current_block_end-requested_size:pClosestFrag->GetEnd();
-      if ((current_block_end - current_block_start) > (best_block_end - best_block_start)) {
-        best_block_start = current_block_start;
-        best_block_end = current_block_end;
+    pClosestFrag = GetFragEndingClosestTo(tentative_block_end);
+
+    tentative_block_start = GetBlockStart(pClosestFrag->GetEnd(),requested_size, tentative_block_end);
+
+    best_block_start = tentative_block_start;
+    best_block_end = tentative_block_end;
+
+    while ((tentative_block_end - tentative_block_start) < requested_size) {
+
+      tentative_block_end = pClosestFrag->GetStart()-1;
+      pClosestFrag = GetFragEndingClosestTo(tentative_block_end);
+
+      tentative_block_start = GetBlockStart(pClosestFrag->GetEnd(),requested_size, tentative_block_end);
+
+      /*try to find the largest block possible*/
+      if ((tentative_block_end - tentative_block_start) > (best_block_end - best_block_start)) {
+        best_block_start = tentative_block_start;
+        best_block_end = tentative_block_end;
       }
     }
   } 
@@ -233,8 +260,6 @@ int RamFs::AllocateNewFragment(const size_t size) {
     if (allocatedFragmentIdx != k_InvalidFragIdx) {
       FindFreeMemoryArea(size, frag_start, frag_end);
       m_storable_params.m_Fragments[allocatedFragmentIdx].Allocate(frag_start,frag_end);
-      allocatedFragmentIdx = allocatedFragmentIdx;
-      m_storable_params.m_FragCount++;
     }
   }
 
@@ -255,4 +280,8 @@ const RamFsFragment* RamFs::GetFragEndingClosestTo(const size_t location) const 
 
 unsigned short RamFs::GetTakenFragsCount() const {
   return m_storable_params.m_FragCount;
+}
+
+size_t RamFs::GetRamSize() const {
+  return m_storable_params.m_ramSize;
 }

@@ -97,8 +97,10 @@ class RamFsFragment{
                             const Timestamp creation_time);
     RamFs_Status FindFile(const char* const& fname, RamFsFile*& pFile);
     unsigned short GetFileCount() const;
+    size_t GetRamSize() const;
     unsigned short GetTakenFragsCount() const;
     void StoreFileInRam(RamFsFile* pFile) const;
+    size_t GetBlockStart(const size_t end_of_closest_frag, const size_t requested_size, const size_t block_end) const;
 
    private:
     RamFs() = default;

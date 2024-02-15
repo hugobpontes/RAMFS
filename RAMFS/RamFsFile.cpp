@@ -11,7 +11,7 @@ Timestamp RamFsFile::GetModificationTimestamp() const {
 void RamFsFile::FreeOwnedFragments() {
   for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
       RamFsFragment* pFrag = m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]);
-      pFrag->initialize(); //free fragment
+      pFrag->Free(); 
   }
   m_storable_params.m_ownedFragmentsCount = 0;
 }

@@ -31,8 +31,12 @@ size_t RamFsFragment::GetStart() const { return m_storable_params.m_start; }
 size_t RamFsFragment::GetEnd() const { return m_storable_params.m_end; }
 
 void RamFsFragment::Allocate(const size_t start, const size_t end) {
-  if (start >= end && start >= RamFs::GetStorableParamsSize() &&
-      end >= RamFs::GetStorableParamsSize()) {
+
+  int x = RamFs::GetStorableParamsSize();
+  int y = m_parentFs->GetRamSize();
+
+  if (end >= start && start >= RamFs::GetStorableParamsSize() &&
+      end >= RamFs::GetStorableParamsSize() && end < m_parentFs->GetRamSize()) {
     m_storable_params.m_start = start;
     m_storable_params.m_end = end;
     m_storable_params.m_isFree = false;
