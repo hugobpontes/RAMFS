@@ -134,8 +134,8 @@ TEST_GROUP(TestFileCreationAndFind){
     creation_status = MyFileSystem.CreateFile("a.txt", pMyFile1, 100);
     find_status = MyFileSystem.FindFile("a.txt", pMyFile2);
 
-    CHECK(pMyFile1 == pMyFile2);
-    CHECK(MyFileSystem.GetFileCount() == 1);
+    CHECK_EQUAL(pMyFile1,pMyFile2);
+    CHECK_EQUAL(MyFileSystem.GetFileCount(),1);
     CHECK(creation_status == RamFs_Status::SUCCESS);
     CHECK(find_status == RamFs_Status::SUCCESS);
   }
@@ -157,13 +157,13 @@ TEST_GROUP(TestFileCreationAndFind){
     find_status1 = MyFileSystem.FindFile("a.txt", pMyFile3);
     find_status2 = MyFileSystem.FindFile("b", pMyFile4);
 
-    CHECK(MyFileSystem.GetFileCount() == 2);
+    CHECK_EQUAL(MyFileSystem.GetFileCount(), 2);
     CHECK(creation_status1 == RamFs_Status::SUCCESS);
     CHECK(creation_status2 == RamFs_Status::SUCCESS);
     CHECK(find_status1 == RamFs_Status::SUCCESS);
     CHECK(find_status2 == RamFs_Status::SUCCESS);
-    CHECK(pMyFile1 == pMyFile3);
-    CHECK(pMyFile2 == pMyFile4);
+    CHECK_EQUAL(pMyFile1,pMyFile3);
+    CHECK_EQUAL(pMyFile2,pMyFile4);
   }
     TEST(TestFileCreationAndFind, CreateAndFindWithBadFilenames) {
       RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
@@ -195,12 +195,12 @@ TEST_GROUP(TestFileCreationAndFind){
       CHECK(find_status2 == RamFs_Status::INVALID_FILENAME);
       CHECK(creation_status3 == RamFs_Status::NULL_POINTER);
       CHECK(find_status3 == RamFs_Status::NULL_POINTER);
-      CHECK(pMyFile1 == nullptr);
-      CHECK(pMyFile2 == nullptr);
-      CHECK(pMyFile3 == nullptr);
-      CHECK(pMyFile4 == nullptr);
-      CHECK(pMyFile5 == nullptr);
-      CHECK(pMyFile6 == nullptr);
+      CHECK_EQUAL(pMyFile1,nullptr);
+      CHECK_EQUAL(pMyFile2,nullptr);
+      CHECK_EQUAL(pMyFile3,nullptr);
+      CHECK_EQUAL(pMyFile4,nullptr);
+      CHECK_EQUAL(pMyFile5,nullptr);
+      CHECK_EQUAL(pMyFile6,nullptr);
     }
 
     TEST(TestFileCreationAndFind, CreateAndFindInexistentFile) {
@@ -215,7 +215,7 @@ TEST_GROUP(TestFileCreationAndFind){
 
       CHECK(creation_status == RamFs_Status::SUCCESS);
       CHECK(find_status == RamFs_Status::FILE_NOT_FOUND);
-      CHECK(pMyFile == nullptr);
+      CHECK_EQUAL(pMyFile,nullptr);
     }
 
     TEST(TestFileCreationAndFind, FileSlotsFull) {
@@ -225,14 +225,12 @@ TEST_GROUP(TestFileCreationAndFind){
       RamFs_Status creation_status;
 
       for (int i = 0; i < 10; i++) {
-        creation_status = MyFileSystem.CreateFile(
-            ("name" + std::to_string(i)).data(), pMyFile, 100);
+        creation_status = MyFileSystem.CreateFile(("name" + std::to_string(i)).data(), pMyFile, 100);
         CHECK(creation_status == RamFs_Status::SUCCESS);
       }
-      creation_status = MyFileSystem.CreateFile(
-          ("name" + std::to_string(10)).data(), pMyFile, 100);
+      creation_status = MyFileSystem.CreateFile(("name" + std::to_string(10)).data(), pMyFile, 100);
       CHECK(creation_status == RamFs_Status::FILE_SLOTS_FULL);
-      CHECK(pMyFile == nullptr);
+      CHECK_EQUAL(pMyFile, nullptr);
     }
 
     TEST(TestFileCreationAndFind, FileAlreadyExists) {
@@ -245,19 +243,15 @@ TEST_GROUP(TestFileCreationAndFind){
 
       Timestamp t_creation = 100;
 
-      creation_status1 =
-          MyFileSystem.CreateFile("file.txt", pMyFile1, t_creation);
-      creation_status2 = MyFileSystem.CreateFile(
-          "file.txt", pMyFile2,
-          t_creation + 100);  // timestamp could also have been 100
+      creation_status1 = MyFileSystem.CreateFile("file.txt", pMyFile1, t_creation);
+      creation_status2 = MyFileSystem.CreateFile("file.txt", pMyFile2,t_creation + 100);  // timestamp could also have been 100
 
       CHECK(creation_status1 == RamFs_Status::SUCCESS);
       CHECK(creation_status2 == RamFs_Status::SUCCESS);
-      CHECK(pMyFile2 == pMyFile1);
-      CHECK(MyFileSystem.GetFileCount() == 1);
+      CHECK_EQUAL(pMyFile2,pMyFile1);
+      CHECK_EQUAL(MyFileSystem.GetFileCount(), 1);
       /*Timestamp should be unaltered when creating a file already created*/
-      CHECK(pMyFile1->GetCreationTimestamp() ==
-            pMyFile2->GetCreationTimestamp());
+      CHECK_EQUAL(pMyFile1->GetCreationTimestamp(),pMyFile2->GetCreationTimestamp());
     }
 
     TEST_GROUP(TestFileWriteRead){void setup(){RamFileEmulator.RamClear();
@@ -291,8 +285,8 @@ TEST_GROUP(TestFileCreationAndFind){
 
     CHECK(write_status == RamFs_Status::SUCCESS);
     CHECK(read_status == RamFs_Status::SUCCESS);
-    CHECK(file_size_after_writing == sizeof(WriteData));
-    CHECK(free_size_after_writing == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData));
+    CHECK_EQUAL(file_size_after_writing,sizeof(WriteData));
+    CHECK_EQUAL(free_size_after_writing,RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData));
     MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));
   }
 
@@ -354,12 +348,12 @@ TEST_GROUP(TestFileCreationAndFind){
     CHECK(read_status2 == RamFs_Status::SUCCESS);
     CHECK(write_status3 == RamFs_Status::SUCCESS);
     CHECK(read_status3 == RamFs_Status::SUCCESS);
-    CHECK(file_size_after_writing1 == sizeof(WriteData1));
-    CHECK(file_size_after_writing2 == sizeof(WriteData2));
-    CHECK(file_size_after_writing3 == sizeof(WriteData3));
-    CHECK(free_size_after_writing1 == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1));
-    CHECK(free_size_after_writing2 == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1) - sizeof(WriteData2));
-    CHECK(free_size_after_writing3 == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1) - sizeof(WriteData2)- sizeof(WriteData3));
+    CHECK_EQUAL(file_size_after_writing1,sizeof(WriteData1));
+    CHECK_EQUAL(file_size_after_writing2,sizeof(WriteData2));
+    CHECK_EQUAL(file_size_after_writing3,sizeof(WriteData3));
+    CHECK_EQUAL(free_size_after_writing1,RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1));
+    CHECK_EQUAL(free_size_after_writing2,RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1) - sizeof(WriteData2));
+    CHECK_EQUAL(free_size_after_writing3,RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1) - sizeof(WriteData2)- sizeof(WriteData3));
     MEMCMP_EQUAL(WriteData1,ReadData1,sizeof(WriteData1));
     MEMCMP_EQUAL(WriteData2,ReadData2,sizeof(WriteData2));
     MEMCMP_EQUAL(WriteData3, ReadData3,sizeof(WriteData3));
@@ -404,15 +398,23 @@ TEST_GROUP(TestFileCreationAndFind){
     CHECK(write_status2 == RamFs_Status::SUCCESS);
     MEMCMP_EQUAL(WriteData1, ReadData1, sizeof(WriteData1));
     MEMCMP_EQUAL(WriteData2, ReadData2, sizeof(WriteData2));
-    CHECK(file_size_after_writing1 == sizeof(WriteData1));
-    CHECK(free_size_after_writing1 == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1));
-    CHECK(file_size_after_writing2 == sizeof(WriteData2));
-    CHECK(free_size_after_writing2 == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData2));
-    CHECK(creation_time == t_creation);
-    CHECK(modif_time1 == t_creation+10);
-    CHECK(modif_time2 == t_creation+20);
+    CHECK_EQUAL(file_size_after_writing1 ,sizeof(WriteData1));
+    CHECK_EQUAL(free_size_after_writing1, RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1));
+    CHECK_EQUAL(file_size_after_writing2, sizeof(WriteData2));
+    CHECK_EQUAL(free_size_after_writing2, RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData2));
+    CHECK_EQUAL(creation_time, t_creation);
+    CHECK_EQUAL(modif_time1, t_creation+10);
+    CHECK_EQUAL(modif_time2,t_creation+20);
 
   }
+
+void FillArrayWithBytes(uint8_t* Arr, size_t size){
+  int j;
+  for (int i = 0; i < size; i++) {
+    Arr[i] = j++;
+    j = (j > 255) ? 0 : j;
+  }
+}
 
   TEST(TestFileWriteRead, Write1ByteBeforeFullFs) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
@@ -420,26 +422,24 @@ TEST_GROUP(TestFileCreationAndFind){
     RamFs_Status read_status;
     RamFs_Status write_status;
 
-    uint8_t* WriteData = new uint8_t[MyFileSystem.GetFreeSize()-1];
-    uint8_t* ReadData = new uint8_t[sizeof(WriteData)];
+    size_t writeSize = MyFileSystem.GetFreeSize()-1;
+    uint8_t* WriteData = new uint8_t[writeSize];
+    uint8_t* ReadData = new uint8_t[writeSize];
 
-    int j;
-    for (int i = 0; i < sizeof(WriteData); i++){
-      WriteData[i] = j++;
-      j = (j>255)?0:j;
-    }
+    FillArrayWithBytes(WriteData, writeSize);
     MyFileSystem.CreateFile("myfile.txt", pMyFile, 100);
 
-    write_status = pMyFile->Write(WriteData, sizeof(WriteData), 110);
+    write_status = pMyFile->Write(WriteData, writeSize, 110);
     size_t free_size_after_writing = MyFileSystem.GetFreeSize();
     size_t file_size_after_writing = pMyFile->GetSize();
     read_status = pMyFile->Read(ReadData, pMyFile->GetSize(), 0);
 
+
     CHECK(write_status == RamFs_Status::SUCCESS);
     CHECK(read_status == RamFs_Status::SUCCESS);
-    MEMCMP_EQUAL(WriteData, ReadData, sizeof(WriteData));
-    CHECK(file_size_after_writing == sizeof(WriteData));
-    CHECK(free_size_after_writing == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData));
+    MEMCMP_EQUAL(WriteData, ReadData, writeSize);
+    CHECK_EQUAL(file_size_after_writing,writeSize);
+    CHECK_EQUAL(free_size_after_writing,RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - writeSize);
 
     delete[] WriteData;
     delete[] ReadData;
