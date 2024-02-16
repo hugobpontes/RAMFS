@@ -143,6 +143,9 @@ RamFs_Status RamFs::CreateFile(const char* const& fname, RamFsFile*& pFile,
 
 RamFs_Status RamFs::FindFile(const char* const& fname, RamFsFile*& pFile) {
 
+
+  //TODO: instead of comparing strings, there should be an hashtable to convert from string to id, and then compare that instead.
+
   pFile = nullptr;
   if (fname == nullptr){
     return RamFs_Status::NULL_POINTER;

@@ -414,6 +414,36 @@ TEST_GROUP(TestFileCreationAndFind){
 
   }
 
+  TEST(TestFileWriteRead, Write1ByteBeforeFullFs) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+    RamFsFile* pMyFile;
+    RamFs_Status read_status;
+    RamFs_Status write_status;
+
+    uint8_t* WriteData = new uint8_t[MyFileSystem.GetFreeSize()-1];
+    uint8_t* ReadData = new uint8_t[sizeof(WriteData)];
+
+    int j;
+    for (int i = 0; i < sizeof(WriteData); i++){
+      WriteData[i] = j++;
+      j = (j>255)?0:j;
+    }
+    MyFileSystem.CreateFile("myfile.txt", pMyFile, 100);
+
+    write_status = pMyFile->Write(WriteData, sizeof(WriteData), 110);
+    size_t free_size_after_writing = MyFileSystem.GetFreeSize();
+    size_t file_size_after_writing = pMyFile->GetSize();
+    read_status = pMyFile->Read(ReadData, pMyFile->GetSize(), 0);
+
+    CHECK(write_status == RamFs_Status::SUCCESS);
+    CHECK(read_status == RamFs_Status::SUCCESS);
+    MEMCMP_EQUAL(WriteData, ReadData, sizeof(WriteData));
+    CHECK(file_size_after_writing == sizeof(WriteData));
+    CHECK(free_size_after_writing == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData));
+
+    delete[] WriteData;
+    delete[] ReadData;
+  }
   TEST(TestFileWriteRead, NullPtrWrite) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
@@ -422,12 +452,13 @@ TEST_GROUP(TestFileCreationAndFind){
 
     MyFileSystem.CreateFile("file.txt", pMyFile, 300);
 
-    write_status = pMyFile->Write(nullptr,10,400);
+    write_status = pMyFile->Write(nullptr, 10, 400);
     size_t free_size_after_writing = MyFileSystem.GetFreeSize();
     size_t file_size_after_writing = pMyFile->GetSize();
 
     CHECK(write_status == RamFs_Status::NULL_POINTER);
-    CHECK(free_size_after_writing == RamAccess::k_RamSize - RamFs::GetStorableParamsSize());
+    CHECK(free_size_after_writing ==
+          RamAccess::k_RamSize - RamFs::GetStorableParamsSize());
     CHECK(file_size_after_writing == 0);
   }
 
