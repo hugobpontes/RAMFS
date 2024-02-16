@@ -184,8 +184,8 @@ int RamFs::FindFreeFragmentSlot() const {
 size_t RamFs::GetBlockStart(const size_t end_of_closest_frag, const size_t requested_size, const size_t block_end) const {
   
   size_t block_start;
-  
-  if (end_of_closest_frag == block_end){
+
+  if (end_of_closest_frag == block_end){ //there is no space between end of closest frag and end of proposed block, so block has size 0
     block_start = block_end;
   } else {
     if (end_of_closest_frag + 1 + requested_size <= block_end) {
@@ -223,7 +223,7 @@ void RamFs::FindFreeMemoryArea(const size_t requested_size, size_t& start, size_
 
     tentative_block_end = init_block_end;
 
-    pClosestFrag = GetFragEndingClosestTo(tentative_block_end);
+    pClosestFrag = GetFragEndingClosestTo(m_storable_params.m_ramSize);
 
     tentative_block_start = GetBlockStart(pClosestFrag->GetEnd(),requested_size, tentative_block_end);
 
@@ -269,9 +269,13 @@ int RamFs::AllocateNewFragment(const size_t size) {
 const RamFsFragment* RamFs::GetFragEndingClosestTo(const size_t location) const {
   // can be improved if we use ordered pointers to frags
   int closest_frag_idx = 0;
-  for (int i = 1; i < k_FragmentNr; i++) {
-    size_t candidate_end = m_storable_params.m_Fragments[i].GetEnd();
-    if ((candidate_end <= location) && (candidate_end > m_storable_params.m_Fragments[closest_frag_idx].GetEnd())) {
+  size_t closest_frag_end = 0;
+  size_t candidate_end = 0;
+
+    for (int i = 0; i < k_FragmentNr; i++) {
+    candidate_end = m_storable_params.m_Fragments[i].GetEnd();
+    if ((candidate_end < location) && (candidate_end > closest_frag_end)) {
+      closest_frag_end = candidate_end;
       closest_frag_idx = i;
     }
   }

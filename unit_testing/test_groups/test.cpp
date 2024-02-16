@@ -291,22 +291,29 @@ TEST_GROUP(TestFileCreationAndFind){
 
     std::string filename1 = "file1.txt";
     std::string filename2 = "file2.txt";
+    std::string filename3 = "file3.txt";
     Timestamp t_creation1 = 100;
     Timestamp t_creation2 = 200;
+    Timestamp t_creation3 = 300;
 
     RamFsFile* pMyFile1;
     RamFsFile* pMyFile2;
     RamFsFile* pMyFile3;
     RamFsFile* pMyFile4;
+    RamFsFile* pMyFile5;
     RamFs_Status write_status1;
     RamFs_Status read_status1;
     RamFs_Status write_status2;
     RamFs_Status read_status2;
+    RamFs_Status write_status3;
+    RamFs_Status read_status3;
 
     uint8_t WriteData1 [] = {1,2,3,4,5,6,7};
     uint8_t WriteData2 [] = {7,6,5,4,3,2,1,0,1};
+    uint8_t WriteData3[] = {17, 16, 15};
     uint8_t ReadData1[sizeof(WriteData1)] = {};
     uint8_t ReadData2[sizeof(WriteData2)] = {};
+    uint8_t ReadData3[sizeof(WriteData3)] = {};
 
     MyFileSystem.CreateFile(filename1.data(), pMyFile1, t_creation1);
     write_status1 = pMyFile1->Write(WriteData1,sizeof(WriteData1),t_creation1+10);
@@ -325,19 +332,30 @@ TEST_GROUP(TestFileCreationAndFind){
     MyFileSystem3.FindFile(filename2.data(), pMyFile4);
     read_status2 = pMyFile4->Read(ReadData2, pMyFile4->GetSize(), 0);
 
+    MyFileSystem3.CreateFile(filename3.data(), pMyFile5, t_creation3);
+    write_status3 = pMyFile5->Write(WriteData3,sizeof(WriteData3),t_creation3+10);
+    read_status3 = pMyFile5->Read(ReadData3, sizeof(WriteData3), 0);
+    size_t free_size_after_writing3 = MyFileSystem3.GetFreeSize();
+    size_t file_size_after_writing3 = pMyFile5->GetSize();
+
     CHECK(write_status1 == RamFs_Status::SUCCESS);
     CHECK(read_status1 == RamFs_Status::SUCCESS);
     CHECK(write_status2 == RamFs_Status::SUCCESS);
     CHECK(read_status2 == RamFs_Status::SUCCESS);
+    CHECK(write_status3 == RamFs_Status::SUCCESS);
+    CHECK(read_status3 == RamFs_Status::SUCCESS);
     CHECK(file_size_after_writing1 == sizeof(WriteData1));
     CHECK(file_size_after_writing2 == sizeof(WriteData2));
+    CHECK(file_size_after_writing3 == sizeof(WriteData3));
     CHECK(free_size_after_writing1 == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1));
     CHECK(free_size_after_writing2 == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1) - sizeof(WriteData2));
+    CHECK(free_size_after_writing3 == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData1) - sizeof(WriteData2)- sizeof(WriteData3));
     MEMCMP_EQUAL(WriteData1,ReadData1,sizeof(WriteData1));
     MEMCMP_EQUAL(WriteData2,ReadData2,sizeof(WriteData2));
+    MEMCMP_EQUAL(WriteData3, ReadData3,sizeof(WriteData3));
   }
 
-  IGNORE_TEST(TestFileWriteRead, WriteToSameFileTwice) {
+  TEST(TestFileWriteRead, WriteToSameFileTwice) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     std::string filename = "file1.txt";
