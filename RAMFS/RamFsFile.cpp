@@ -19,7 +19,7 @@ void RamFsFile::FreeOwnedFragments() {
 RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
   
   size_t owned_memory_size = 0;
-  RamFs_Status status = RamFs_Status::SUCCESS;
+
   int new_frag_idx = k_InvalidFragIdx;
   RamFsFragment* p_new_frag;
 
@@ -41,13 +41,12 @@ RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
     p_new_frag = m_parentFs->GetFragmentAt(new_frag_idx);
     owned_memory_size += p_new_frag->GetSize();
   }
-  return status;
+  return RamFs_Status::SUCCESS;
 }
 
 RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
                                 const Timestamp modif_time) {
     // check args
-    RamFs_Status status = RamFs_Status::SUCCESS;
     size_t written_size = 0;
 
     if (pData == nullptr){
@@ -57,9 +56,9 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
     FreeOwnedFragments();
     m_parentFs->IncrementFreeSize(m_storable_params.m_fileSize);
 
-    status = TakeHoldOfRequiredFragments(size);
+    RamFs_Status take_status = TakeHoldOfRequiredFragments(size);
 
-    if (status == RamFs_Status::SUCCESS){
+    if (take_status == RamFs_Status::SUCCESS){
       for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
         RamFsFragment* pFrag;
         pFrag = m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]);
@@ -72,7 +71,7 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
       m_storable_params.m_modifTimestamp = modif_time;
     }
 
-    return RamFs_Status::SUCCESS;  // return status var
+    return RamFs_Status::SUCCESS;  
   }
 
   RamFs_Status RamFsFile::Read(void* const pData, const size_t size,
