@@ -172,25 +172,35 @@ TEST_GROUP(TestFileCreationAndFind){
       RamFsFile* pMyFile2;
       RamFsFile* pMyFile3;
       RamFsFile* pMyFile4;
+      RamFsFile* pMyFile5;
+      RamFsFile* pMyFile6;
       RamFs_Status creation_status1;
       RamFs_Status creation_status2;
+      RamFs_Status creation_status3;
       RamFs_Status find_status1;
       RamFs_Status find_status2;
+      RamFs_Status find_status3;
 
       creation_status1 = MyFileSystem.CreateFile("", pMyFile1, 100);
-      creation_status2 =
-          MyFileSystem.CreateFile("filename_is_long.txt", pMyFile2, 100);
-      find_status1 = MyFileSystem.FindFile("", pMyFile3);
-      find_status2 = MyFileSystem.FindFile("filename_is_long.txt", pMyFile4);
+      creation_status2 = MyFileSystem.CreateFile("filename_is_long.txt", pMyFile2, 100);
+      creation_status3 = MyFileSystem.CreateFile(nullptr, pMyFile3, 100);
+
+      find_status1 = MyFileSystem.FindFile("", pMyFile4);
+      find_status2 = MyFileSystem.FindFile("filename_is_long.txt", pMyFile5);
+      find_status3 = MyFileSystem.FindFile(nullptr, pMyFile6);
 
       CHECK(creation_status1 == RamFs_Status::INVALID_FILENAME);
       CHECK(find_status1 == RamFs_Status::INVALID_FILENAME);
       CHECK(creation_status2 == RamFs_Status::INVALID_FILENAME);
       CHECK(find_status2 == RamFs_Status::INVALID_FILENAME);
+      CHECK(creation_status3 == RamFs_Status::NULL_POINTER);
+      CHECK(find_status3 == RamFs_Status::NULL_POINTER);
       CHECK(pMyFile1 == nullptr);
       CHECK(pMyFile2 == nullptr);
       CHECK(pMyFile3 == nullptr);
       CHECK(pMyFile4 == nullptr);
+      CHECK(pMyFile5 == nullptr);
+      CHECK(pMyFile6 == nullptr);
     }
 
     TEST(TestFileCreationAndFind, CreateAndFindInexistentFile) {
@@ -281,8 +291,8 @@ TEST_GROUP(TestFileCreationAndFind){
 
     CHECK(write_status == RamFs_Status::SUCCESS);
     CHECK(read_status == RamFs_Status::SUCCESS);
-    //CHECK(file_size_after_writing == sizeof(WriteData));
-    //CHECK(free_size_after_writing == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData));
+    CHECK(file_size_after_writing == sizeof(WriteData));
+    CHECK(free_size_after_writing == RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - sizeof(WriteData));
     MEMCMP_EQUAL(WriteData,ReadData,sizeof(WriteData));
   }
 
@@ -404,15 +414,30 @@ TEST_GROUP(TestFileCreationAndFind){
 
   }
 
+  TEST(TestFileWriteRead, NullPtrWrite) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
-    //test 1 write is accessible correctly.
-    //test 2nd write erases accordingly, and can be accessed correctly when loaded(?)
-    //test writing to inexistent file
+    RamFsFile* pMyFile;
+    RamFs_Status write_status;
+
+    MyFileSystem.CreateFile("file.txt", pMyFile, 300);
+
+    write_status = pMyFile->Write(nullptr,10,400);
+    size_t free_size_after_writing = MyFileSystem.GetFreeSize();
+    size_t file_size_after_writing = pMyFile->GetSize();
+
+    CHECK(write_status == RamFs_Status::NULL_POINTER);
+    CHECK(free_size_after_writing == RamAccess::k_RamSize - RamFs::GetStorableParamsSize());
+    CHECK(file_size_after_writing == 0);
+  }
+
     //test writing data size that doesnt fit, or size 0
     //test invalid pointer
-    //test with multiple files
-    //test all return messages
+    //test all return messages (includi)
     //test with full file slots
+    //test too fragmented files (>3)
+    //ignore test with fragmented files (needs delete), this includes checking status
+    //ignore test with defragmentation (needs delete),this includes checking status
 
     //test deletion, appending, etc.. (deletion is essentially what is done in the beginning of write)
     //test all return messages

@@ -112,60 +112,54 @@ bool RamFs::IsInitialized() const { return m_isInitialized; }
 
 RamFs_Status RamFs::CreateFile(const char* const& fname, RamFsFile*& pFile,
                                const Timestamp creation_time) {
-  /*First check if filename can be found, and if so, just return a pointer to
-   * the found file*/
+  pFile = nullptr;
+  if (fname == nullptr) {
+    return RamFs_Status::NULL_POINTER;
+  }
   RamFsFile* found_file;
   RamFs_Status find_status = FindFile(fname, found_file);
   if (find_status == RamFs_Status::SUCCESS) {
     pFile = found_file;
-    return find_status;
+    return RamFs_Status::SUCCESS;
+  } 
+  size_t filename_length = strlen(fname);
+  if (filename_length <= 0 || filename_length >= k_MaxFilenameSize) {
+    return RamFs_Status::INVALID_FILENAME;
   } else {
-    /*Default output values returned when free file slot cannot be found, to be
-     * changed if that's not the case*/
-    RamFs_Status status = RamFs_Status::FILE_SLOTS_FULL;
-    pFile = nullptr;
+    for (int i = 0; i < k_FileNr; i++) {
+      if (m_storable_params.m_Files[i].m_storable_params.m_isActive == false) {
+        /*Found free file slot, initialize new file*/
+        m_storable_params.m_Files[i].initialize(fname,filename_length,creation_time);
+        m_storable_params.m_Files[i].setActiveState(true);
+        m_storable_params.m_FileCount++;
 
-    size_t filename_length = strlen(fname);
-    if (filename_length <= 0 || filename_length >= k_MaxFilenameSize) {
-      status = RamFs_Status::INVALID_FILENAME;
-      pFile = nullptr;
-    } else {
-      for (int i = 0; i < k_FileNr; i++) {
-        if (m_storable_params.m_Files[i].m_storable_params.m_isActive == false) {
-          /*Found free file slot, initialize new file*/
-          m_storable_params.m_Files[i].initialize(fname,filename_length,creation_time);
-          m_storable_params.m_Files[i].setActiveState(true);
-          m_storable_params.m_FileCount++;
-
-          pFile = &(m_storable_params.m_Files[i]);
-          status = RamFs_Status::SUCCESS;
-          break;
-        }
+        pFile = &(m_storable_params.m_Files[i]);
+        return RamFs_Status::SUCCESS;
       }
     }
-    return status;
   }
+  return RamFs_Status::FILE_SLOTS_FULL;
 }
 
 RamFs_Status RamFs::FindFile(const char* const& fname, RamFsFile*& pFile) {
-  /*Default output values returned when file cannot be found, to be changed if
-   * that's not the case*/
-  RamFs_Status status = RamFs_Status::FILE_NOT_FOUND;
+
   pFile = nullptr;
+  if (fname == nullptr){
+    return RamFs_Status::NULL_POINTER;
+  }
+  
   size_t filename_length = strlen(fname);
   if (filename_length <= 0 || filename_length >= k_MaxFilenameSize) {
-    pFile = nullptr;
-    status = RamFs_Status::INVALID_FILENAME;
+    return RamFs_Status::INVALID_FILENAME;
   } else {
     for (int i = 0; i < k_FileNr; i++) {
       if (!(strcmp(m_storable_params.m_Files[i].m_storable_params.m_filename, fname))) {
         pFile = &(m_storable_params.m_Files[i]);
-        status = RamFs_Status::SUCCESS;
-        break;
+        return RamFs_Status::SUCCESS;
       }
     }
   }
-  return status;
+  return RamFs_Status::FILE_NOT_FOUND;
 }
 
 unsigned short RamFs::GetFileCount() const { return m_storable_params.m_FileCount; }

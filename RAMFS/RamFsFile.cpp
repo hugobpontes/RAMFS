@@ -50,6 +50,10 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
     RamFs_Status status = RamFs_Status::SUCCESS;
     size_t written_size = 0;
 
+    if (pData == nullptr){
+      return RamFs_Status::NULL_POINTER;
+    }
+
     FreeOwnedFragments();
     m_parentFs->IncrementFreeSize(m_storable_params.m_fileSize);
 

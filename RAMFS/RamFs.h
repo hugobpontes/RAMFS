@@ -20,6 +20,7 @@ enum class RamFs_Status {
   INVALID_FILENAME,
   FILE_SLOTS_FULL,
   FILE_NOT_FOUND,
+  NULL_POINTER,
 };
 
 class RamFs;
