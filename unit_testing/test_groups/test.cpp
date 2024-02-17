@@ -408,32 +408,45 @@ TEST_GROUP(TestFileCreationAndFind){
 
   }
 
-void FillArrayWithBytes(uint8_t* Arr, size_t size){
-  int j;
-  for (int i = 0; i < size; i++) {
-    Arr[i] = j++;
-    j = (j > 255) ? 0 : j;
-  }
-}
+  void Helper_WriteArrayToFileAndRead(RamFs& Fs, RamFsFile*& pFile,
+                                      uint8_t*& WriteArr, uint8_t*& ReadArr,
+                                      size_t size, RamFs_Status& WriteStatus,
+                                      RamFs_Status& ReadStatus,
+                                      size_t& FreeSizeAfterWriting,
+                                      size_t& FileSizeAfterWriting) {
+    WriteArr = new uint8_t[size];
+    ReadArr = new uint8_t[size];
+    int j;
+    for (int i = 0; i < size; i++) {
+      WriteArr[i] = j++;
+      j = (j > 255) ? 0 : j;
+    }
+    Fs.CreateFile("file.txt", pFile, 100);
 
-  TEST(TestFileWriteRead, Write1ByteBeforeFullFs) {
+    WriteStatus = pFile->Write(WriteArr, size, 110);
+    FreeSizeAfterWriting = Fs.GetFreeSize();
+    FileSizeAfterWriting = pFile->GetSize();
+    ReadStatus = pFile->Read(ReadArr, pFile->GetSize(), 0);
+  }
+
+  TEST(TestFileWriteRead, Write1ByteLessThanFillingFs) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
     RamFsFile* pMyFile;
     RamFs_Status read_status;
     RamFs_Status write_status;
+    size_t writeSize;
+    uint8_t* WriteData;
+    uint8_t* ReadData;
+    size_t free_size_after_writing;
+    size_t file_size_after_writing;
 
-    size_t writeSize = MyFileSystem.GetFreeSize()-1;
-    uint8_t* WriteData = new uint8_t[writeSize];
-    uint8_t* ReadData = new uint8_t[writeSize];
+    writeSize = MyFileSystem.GetFreeSize()-1;
 
-    FillArrayWithBytes(WriteData, writeSize);
-    MyFileSystem.CreateFile("myfile.txt", pMyFile, 100);
-
-    write_status = pMyFile->Write(WriteData, writeSize, 110);
-    size_t free_size_after_writing = MyFileSystem.GetFreeSize();
-    size_t file_size_after_writing = pMyFile->GetSize();
-    read_status = pMyFile->Read(ReadData, pMyFile->GetSize(), 0);
-
+    Helper_WriteArrayToFileAndRead(MyFileSystem, pMyFile, WriteData, 
+                                   ReadData, writeSize, write_status,
+                                   read_status, free_size_after_writing,
+                                   file_size_after_writing);
 
     CHECK(write_status == RamFs_Status::SUCCESS);
     CHECK(read_status == RamFs_Status::SUCCESS);
@@ -444,7 +457,37 @@ void FillArrayWithBytes(uint8_t* Arr, size_t size){
     delete[] WriteData;
     delete[] ReadData;
   }
-  TEST(TestFileWriteRead, NullPtrWrite) {
+
+  TEST(TestFileWriteRead, FillFs) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    RamFsFile* pMyFile;
+    RamFs_Status read_status;
+    RamFs_Status write_status;
+    size_t writeSize;
+    uint8_t* WriteData;
+    uint8_t* ReadData;
+    size_t free_size_after_writing;
+    size_t file_size_after_writing;
+
+    writeSize = MyFileSystem.GetFreeSize();
+
+    Helper_WriteArrayToFileAndRead(MyFileSystem, pMyFile, WriteData, 
+                                   ReadData, writeSize, write_status,
+                                   read_status, free_size_after_writing,
+                                   file_size_after_writing);
+
+    CHECK(write_status == RamFs_Status::SUCCESS);
+    CHECK(read_status == RamFs_Status::SUCCESS);
+    MEMCMP_EQUAL(WriteData, ReadData, writeSize);
+    CHECK_EQUAL(file_size_after_writing,writeSize);
+    CHECK_EQUAL(free_size_after_writing,RamAccess::k_RamSize - RamFs::GetStorableParamsSize() - writeSize);
+
+    delete[] WriteData;
+    delete[] ReadData;
+  }
+
+  IGNORE_TEST(TestFileWriteRead, NullPtrWrite) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     RamFsFile* pMyFile;

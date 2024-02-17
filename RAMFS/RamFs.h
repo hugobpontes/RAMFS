@@ -61,7 +61,8 @@ class RamFsFragment{
   public:
   
   friend class RamFs;
-  friend class RamFsFile;
+  friend class RamFsFile; 
+  static size_t BlockSize(const size_t start, const size_t end);
 
  private:  
   size_t GetSize() const;
@@ -69,6 +70,7 @@ class RamFsFragment{
   void Allocate(const size_t start, const size_t end);
   size_t GetStart() const;
   size_t GetEnd() const;
+
   bool operator==(const RamFsFragment& other) const;
   void initialize();
   RamFsFragment() = default;
@@ -101,7 +103,7 @@ class RamFsFragment{
     size_t GetRamSize() const;
     unsigned short GetTakenFragsCount() const;
     void StoreFileInRam(RamFsFile* pFile) const;
-    size_t GetBlockStart(const size_t end_of_closest_frag, const size_t requested_size, const size_t block_end) const;
+    void GetBlockAt(const RamFsFragment * pClosestFrag, const size_t requested_size, size_t& block_end, size_t& block_start) const ;
 
    private:
     RamFs() = default;
