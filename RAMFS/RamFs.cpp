@@ -101,11 +101,6 @@ void RamFs::StoreFileInRam(RamFsFile* pFile) const {
         m_storable_params.m_FragCount == other.m_storable_params.m_FragCount);
   }
 
-void RamFs::_TempFileEdit_() {
-  m_storable_params.m_Files[0].m_storable_params.dummy = 99;
-  StoreFsInRam();
-}
-
 bool RamFs::WasLoaded() const { return m_wasLoaded; }
 
 bool RamFs::IsInitialized() const { return m_isInitialized; }

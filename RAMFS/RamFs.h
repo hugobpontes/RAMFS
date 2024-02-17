@@ -17,11 +17,13 @@ using Timestamp = unsigned long;
 
 enum class RamFs_Status {
   SUCCESS,
+  STATUS_UNSET,
   INVALID_FILENAME,
   FILE_SLOTS_FULL,
   FILE_NOT_FOUND,
   NULL_POINTER,
   INSUFFICIENT_STORAGE,
+
 };
 
 class RamFs;
@@ -94,7 +96,6 @@ class RamFsFragment{
     size_t GetUsableSize() const;
     size_t GetFreeSize() const;
     static size_t GetStorableParamsSize();
-    void _TempFileEdit_();
     bool WasLoaded() const;
     bool IsInitialized() const;
     RamFs_Status CreateFile(const char* const& fname, RamFsFile*& pFile,
