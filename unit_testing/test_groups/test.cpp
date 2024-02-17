@@ -408,6 +408,14 @@ TEST_GROUP(TestFileCreationAndFind){
 
   }
 
+  void Helper_FillByteArray(uint8_t* arr, size_t size){
+    int j;
+    for (int i = 0; i < size; i++) {
+      arr[i] = j++;
+      j = (j > 255) ? 0 : j;
+    }
+  }
+
   void Helper_WriteArrayToFileAndRead(RamFs& Fs, RamFsFile*& pFile,
                                       uint8_t*& WriteArr, uint8_t*& ReadArr,
                                       size_t size, RamFs_Status& WriteStatus,
@@ -416,11 +424,7 @@ TEST_GROUP(TestFileCreationAndFind){
                                       size_t& FileSizeAfterWriting) {
     WriteArr = new uint8_t[size];
     ReadArr = new uint8_t[size];
-    int j;
-    for (int i = 0; i < size; i++) {
-      WriteArr[i] = j++;
-      j = (j > 255) ? 0 : j;
-    }
+    Helper_FillByteArray(WriteArr,size);
     Fs.CreateFile("file.txt", pFile, 100);
 
     WriteStatus = pFile->Write(WriteArr, size, 110);
@@ -487,7 +491,31 @@ TEST_GROUP(TestFileCreationAndFind){
     delete[] ReadData;
   }
 
-  IGNORE_TEST(TestFileWriteRead, NullPtrWrite) {
+    TEST(TestFileWriteRead, OverflowFs) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    RamFsFile* pMyFile;
+    size_t writeSize;
+    uint8_t* WriteData;
+
+    writeSize = MyFileSystem.GetFreeSize()+1;
+
+    WriteData = new uint8_t[writeSize];
+    Helper_FillByteArray(WriteData, writeSize);
+    MyFileSystem.CreateFile("file.txt", pMyFile, 100);
+
+    RamFs_Status WriteStatus = pMyFile->Write(WriteData, writeSize, 110);
+    size_t FreeSizeAfterWriting = MyFileSystem.GetFreeSize();
+    size_t FileSizeAfterWriting = pMyFile->GetSize();
+
+    CHECK(WriteStatus == RamFs_Status::INSUFFICIENT_STORAGE);
+    CHECK_EQUAL(FreeSizeAfterWriting, RamAccess::k_RamSize- RamFs::GetStorableParamsSize());
+    CHECK_EQUAL(FileSizeAfterWriting,0);
+
+    delete[] WriteData;
+  }
+
+  TEST(TestFileWriteRead, NullPtrWrite) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     RamFsFile* pMyFile;
@@ -500,18 +528,23 @@ TEST_GROUP(TestFileCreationAndFind){
     size_t file_size_after_writing = pMyFile->GetSize();
 
     CHECK(write_status == RamFs_Status::NULL_POINTER);
-    CHECK(free_size_after_writing ==
-          RamAccess::k_RamSize - RamFs::GetStorableParamsSize());
+    CHECK(free_size_after_writing == RamAccess::k_RamSize - RamFs::GetStorableParamsSize());
     CHECK(file_size_after_writing == 0);
   }
 
-    //test writing data size that doesnt fit, or size 0
-    //test invalid pointer
-    //test all return messages (includi)
-    //test with full file slots
+    //test writing data size that doesnt fit in fs
+    //test writing with data size 0
+    //test all return messages (including those regarding fragments (these need to wait)
+    //test reading more than file size
+    //test invalid read sizes
+    //test read null ptr
+    //test read with position over file size
+
     //test too fragmented files (>3)
     //ignore test with fragmented files (needs delete), this includes checking status
     //ignore test with defragmentation (needs delete),this includes checking status
+
+    //test appending to 1 byte less than full, full, over full (like we did for normal writing)
 
     //test deletion, appending, etc.. (deletion is essentially what is done in the beginning of write)
     //test all return messages

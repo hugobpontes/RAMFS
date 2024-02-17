@@ -46,11 +46,14 @@ RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
 
 RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
                                 const Timestamp modif_time) {
-    // check args
+    
     size_t written_size = 0;
 
     if (pData == nullptr){
       return RamFs_Status::NULL_POINTER;
+    }
+    if (size > m_parentFs->GetFreeSize()){
+      return RamFs_Status::INSUFFICIENT_STORAGE;
     }
 
     FreeOwnedFragments();
@@ -69,6 +72,8 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
       m_parentFs->IncrementFreeSize(-written_size);
       m_parentFs->StoreFileInRam(this);
       m_storable_params.m_modifTimestamp = modif_time;
+    } else {
+      return take_status;
     }
 
     return RamFs_Status::SUCCESS;  

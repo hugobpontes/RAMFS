@@ -21,6 +21,7 @@ enum class RamFs_Status {
   FILE_SLOTS_FULL,
   FILE_NOT_FOUND,
   NULL_POINTER,
+  INSUFFICIENT_STORAGE,
 };
 
 class RamFs;
