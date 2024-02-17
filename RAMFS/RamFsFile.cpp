@@ -41,13 +41,17 @@ RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
     p_new_frag = m_parentFs->GetFragmentAt(new_frag_idx);
     owned_memory_size += p_new_frag->GetSize();
   }
+
+  m_storable_params.m_fileSize = owned_memory_size;
+  m_parentFs->IncrementFreeSize(-owned_memory_size);
+
   return RamFs_Status::SUCCESS;
 }
 
 RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
                                 const Timestamp modif_time) {
     
-    size_t written_size = 0;
+    size_t already_written_size = 0;
 
     if (pData == nullptr){
       return RamFs_Status::NULL_POINTER;
@@ -65,11 +69,9 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
       for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
         RamFsFragment* pFrag;
         pFrag = m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]);
-        m_parentFs->m_ramAccess.RamWrite(static_cast<const char* const>(pData) + written_size,pFrag->GetSize(), pFrag->GetStart());
-        written_size += pFrag->GetSize();
+        m_parentFs->m_ramAccess.RamWrite(static_cast<const char* const>(pData) + already_written_size,pFrag->GetSize(), pFrag->GetStart());
+        already_written_size += pFrag->GetSize();
       }
-      m_storable_params.m_fileSize = written_size;
-      m_parentFs->IncrementFreeSize(-written_size);
       m_storable_params.m_modifTimestamp = modif_time;
       m_parentFs->StoreFileInRam(this);
 
@@ -82,7 +84,7 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
 
   RamFs_Status RamFsFile::Read(void* const pData, const size_t size,
                                const size_t start_pos) const {
-                                
+
     size_t already_read_size = 0;
 
     if (pData == nullptr) {
