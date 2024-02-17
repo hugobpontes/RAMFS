@@ -562,7 +562,7 @@ TEST_GROUP(TestFileWriteRead){
 
   }
 
-  IGNORE_TEST(TestFileWriteRead, ReadNullPtr) {
+  TEST(TestFileWriteRead, ReadNullPtr) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
     write_size1 = 10;

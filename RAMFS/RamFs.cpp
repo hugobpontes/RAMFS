@@ -282,7 +282,6 @@ const RamFsFragment* RamFs::GetFragEndingClosestTo(const size_t location) const 
       pFrag = &(m_storable_params.m_Fragments[i]);
     }
   }
-  
   return pFrag;
 }
 

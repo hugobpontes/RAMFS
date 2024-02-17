@@ -82,20 +82,22 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
 
   RamFs_Status RamFsFile::Read(void* const pData, const size_t size,
                                const size_t start_pos) const {
-    size_t read_size = 0;
+                                
+    size_t already_read_size = 0;
 
-    if (0) {  // check params and also check frags are appropriate
-
-    } else {
-      for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
-        RamFsFragment* pFrag;
-        pFrag = m_parentFs->GetFragmentAt(
-            m_storable_params.m_ownedFragmentsIdxs[i]);
-        m_parentFs->m_ramAccess.RamRead(
-            static_cast<char* const>(pData) + read_size, pFrag->GetSize(),
-            pFrag->GetStart());
-        read_size += pFrag->GetSize();
-      }
+    if (pData == nullptr) {
+      return RamFs_Status::NULL_POINTER;
+    }
+    // check that frags size is enough for read size
+    
+    for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
+      RamFsFragment* pFrag;
+      pFrag = m_parentFs->GetFragmentAt(
+          m_storable_params.m_ownedFragmentsIdxs[i]);
+      m_parentFs->m_ramAccess.RamRead(
+          static_cast<char* const>(pData) + already_read_size, pFrag->GetSize(),
+          pFrag->GetStart());
+      already_read_size += pFrag->GetSize();
     }
     return RamFs_Status::SUCCESS;
   }
