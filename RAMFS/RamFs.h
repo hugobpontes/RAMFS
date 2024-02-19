@@ -24,6 +24,7 @@ enum class RamFs_Status {
   NULL_POINTER,
   INSUFFICIENT_STORAGE,
   READ_OUT_OF_BOUNDS,
+  FILE_TOO_FRAGMENTED,
 
 };
 
@@ -51,8 +52,9 @@ class RamFsFile {
   void ReadFromFileFrags(void* const pData, const int starting_frag,
                     const int starting_frag_pos, const size_t requested_size) const;
   void FreeHeldData();
+  int ComputeRequiredFragments(const size_t size) const;
 
-      RamFs* m_parentFs;
+  RamFs* m_parentFs;
   struct StorableFile{
     Filename m_filename;
     size_t m_fileSize;
@@ -85,7 +87,7 @@ class RamFsFragment{
   ~RamFsFragment() = default;
 
   RamFs* m_parentFs;
-  struct StorableFileSystem {
+  struct StorableFragment {
     size_t m_start;
     size_t m_end;
     bool m_isFree = true;    

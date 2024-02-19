@@ -62,7 +62,7 @@ uint8_t* WriteData;
 uint8_t* ReadData;
 
 /*one more than the usable file system space*/
-int DataArraySize = RamAccess::k_RamSize - RamFs::GetStorableParamsSize()+ 1;
+int DataArraySize = RamAccess::k_RamSize;
 constexpr Timestamp time1 = 100;
 constexpr Timestamp time2 = 110;
 constexpr Timestamp time3 = 120;
@@ -75,7 +75,7 @@ constexpr char fname2[] = "file2.txt";
 constexpr char fname3[] = "file3.txt";
 
 static void fillDataArray(uint8_t* arr, size_t size, bool zero_fill ) {
-  int j;
+  int j = 0;
   for (int i = 0; i < size; i++) {
     if (zero_fill){
       arr[i]=0;
@@ -693,7 +693,7 @@ TEST(TestDelete, BasicDelete) {
   CHECK(find_status1 == RamFs_Status::FILE_NOT_FOUND);
 }
 
-TEST(TestDelete, 11thFile) {
+TEST(TestDelete, Use11thFile) {
   RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
   write_size1 = 5;
@@ -731,7 +731,9 @@ TEST(TestDelete, FragmentationByDelete) {
 
   write_size1 = 5;
   write_size3 = 20;
-  write_size2 = MyFileSystem.GetFreeSize()-write_size3;
+  write_size2 = MyFileSystem.GetFreeSize()-write_size3; 
+  //size2 is size required to only leave size3-size1 contiguous bytes
+  //|5B|Large block|(20-5)B|
 
   MyFileSystem.CreateFile(fname1, pMyFile1, time1);
   MyFileSystem.CreateFile(fname2, pMyFile2, time1);
@@ -748,31 +750,105 @@ TEST(TestDelete, FragmentationByDelete) {
   CHECK_EQUAL(MyFileSystem.GetFreeSize(),0);
   CHECK_EQUAL(pMyFile3->GetSize(), write_size3);
 
-  //actually test with still one or two bytes left
-  //>>>>>>>>>>>>LOAD FS!!
+}
+
+TEST(TestDelete, FragmentationByDelete_UnfilledFsAndLoad) {
+  RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+  write_size1 = 5;
+  write_size3 = 20;
+  int margin = 2;
+  write_size2 = MyFileSystem.GetFreeSize() - write_size3 - margin;
+  // size2 is size required to only size3-size1+margin contiguous bytes
+  //|5B|Large block|(20-5+2)B|
+
+  MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+  MyFileSystem.CreateFile(fname2, pMyFile2, time1);
+  MyFileSystem.CreateFile(fname3, pMyFile3, time1);
+
+  write_status1 = pMyFile1->Write(WriteData, write_size1, time2);
+  write_status2 = pMyFile2->Write(WriteData + 100, write_size2, time2);
+  delete_status1 = pMyFile1->Delete();
+  write_status3 = pMyFile3->Write(WriteData + 300, write_size3, time3);
+
+  RamFs MyFileSystem2(RamAccess::k_RamSize, RamFileEmulator);
+  MyFileSystem2.FindFile(fname3,pMyFile4);
+  read_status1 = pMyFile4->Read(ReadData, write_size3, 0);
+
+  CHECK(write_status3 == RamFs_Status::SUCCESS);
+  MEMCMP_EQUAL(WriteData + 300, ReadData, write_size3);
+  CHECK_EQUAL(MyFileSystem2.GetFreeSize(), margin);
+  CHECK_EQUAL(pMyFile3->GetSize(), write_size3);
 
 }
-    //->test fragmentation by
-  //->creating small file, large file, small file. Then deleting the small ones,
-  // and having a new file take those frags (one must use up all of the fs to
-  //create a scenario where it wouldnt work without fragmenation). Write to this fragmented file then instantiate new object and then read from it
+
+IGNORE_TEST(TestDelete, FragmentationByDelete_UnfilledFsAndLoad) {  
   
+  /*For this test we want to fragment the file system as such:
+  |5B|XB|5B|XB|5B|XB|5B and then delete the 5B files and then try to create a 20B file.
+  Since this requires fragments, an error message should be returned when writing.
+  Additionally, the file should be reset. */
+
+  constexpr int kTotalFiles = 7;
+
+  RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+  write_size1 = 20;
+  free_size1 = MyFileSystem.GetFreeSize();
+  size_t small_file_size = 5;
+  size_t big_file_size = (free_size1 - write_size1)/3;
+
+  for (int i = 0; i < kTotalFiles; i++) {
+    creation_status1 = MyFileSystem.CreateFile(("name" + std::to_string(i)).data(), pMyFile1, time1);
+    CHECK(creation_status1 == RamFs_Status::SUCCESS);
+    if (i%2 == 0){ //index of small files as decribed in the beginning of this test
+      pMyFile1->Write(WriteData,small_file_size,time1+i);
+    } else { 
+      pMyFile1->Write(WriteData,big_file_size,time1+i);
+    }
+  }
+
+  for (int i = 0; i < kTotalFiles; i++) {
+    find_status1 = MyFileSystem.FindFile(("name" + std::to_string(i)).data(), pMyFile1);
+    CHECK(find_status1 == RamFs_Status::SUCCESS);
+    if (i%2){
+      pMyFile1->Delete();
+    }
+  }
+
+  creation_status2 = MyFileSystem.CreateFile(fname1, pMyFile2, time3);
+  write_status1 = pMyFile2->Write(WriteData, 2, time5); //this is just to show later that file wasnt altered
+  file_size1 = pMyFile2->GetSize();
+  free_size1 = MyFileSystem.GetFreeSize();
+  write_status2 = pMyFile2->Write(WriteData, write_size1, time6);
+  file_size2 = pMyFile2->GetSize();
+  free_size2 = MyFileSystem.GetFreeSize();
+
+  CHECK(creation_status2 == RamFs_Status::SUCCESS); // check status
+  CHECK(write_status1 == RamFs_Status::FILE_TOO_FRAGMENTED);
+  CHECK_EQUAL(file_size1,file_size2);
+  CHECK_EQUAL(free_size1, free_size2);
+}
   //->test too fragmented file (same as above but two large files leading to more fragments than the max(Also Check status))
-  //->test no more fragments even though files have the appropriate amount of frags
 
   //->test appending to 1 byte less than full, full, over full (like we did for
   // normal writing)
 
-  //->same tests for write as for append pretty much
-  //->test no more frag slots left in file for append
-  //->repeat fragmentation tests but fragmente with append instead of delete
+//->same tests for write as for append pretty much
+//->test no more frag slots left in file for append
+//->test no more fragments slots available in fs even though files have the appropriate amount of
+//frags (will i need to fragment 10 files???? better wait for appending)
+//->repeat fragmentation tests but fragmente with append instead of delete
 
-  //->test filename get
+//->test filename get
 
-  //->general refactoring: clean up ugly code, remove repetitions, try to create helper functions...
-  //->improvements: hash table filename lookup, partial fs store, check ther to do's
-  //->create flexible types, check type coherence (for addresses, for indexes, etc...)
-  //->check const correctness of everything
-  //->add doxygen comments 
+//->general refactoring: clean up ugly code, remove repetitions, try to create
+//helper functions...
+//->improvements: hash table filename lookup, partial fs store, check ther to
+//do's
+//->create flexible types, check type coherence (for addresses, for indexes,
+//etc...)
+//->check const correctness of everything
+//->add doxygen comments
 
-  // leave defragmentation for a later update (will need to shift data around).
+// leave defragmentation for a later update (will need to shift data around).

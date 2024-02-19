@@ -19,6 +19,11 @@ void RamFsFile::FreeOwnedFragments() {
   m_storable_params.m_ownedFragmentsCount = 0;
 }
 
+int RamFsFile::ComputeRequiredFragments(const size_t size) const {
+  //break condition, -1 if 1) not enough frags are available 2) frags goes over frag limit
+  return 0;
+}
+
 RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
   
   size_t owned_memory_size = 0;
@@ -33,7 +38,7 @@ RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
       break;
     }
 
-    new_frag_idx = m_parentFs->AllocateNewFragment(size);
+    new_frag_idx = m_parentFs->AllocateNewFragment(size-owned_memory_size);
 
     if (new_frag_idx == k_InvalidFragIdx || p_new_frag == nullptr) {
       // set bad status
