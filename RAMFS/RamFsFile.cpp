@@ -13,6 +13,9 @@ void RamFsFile::FreeOwnedFragments() {
       RamFsFragment* pFrag = m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]);
       pFrag->Free(); 
   }
+  for (int i = 0; i < k_MaxFragmentPerFile; i++) {
+    m_storable_params.m_ownedFragmentsIdxs[i] = 0;
+  }
   m_storable_params.m_ownedFragmentsCount = 0;
 }
 
@@ -60,8 +63,7 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t requested_si
       return RamFs_Status::INSUFFICIENT_STORAGE;
     }
 
-    FreeOwnedFragments();
-    m_parentFs->IncrementFreeSize(m_storable_params.m_fileSize);
+    FreeHeldData();
 
     RamFs_Status take_status = TakeHoldOfRequiredFragments(requested_size);
 
@@ -144,10 +146,7 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t requested_si
     m_storable_params.m_creationTimestamp = creation_time;
     m_storable_params.m_modifTimestamp = creation_time;
     m_storable_params.m_isActive = false;
-    for (int i = 0; i < k_MaxFragmentPerFile; i++) {
-      m_storable_params.m_ownedFragmentsIdxs[i] = 0;
-    }
-    m_storable_params.m_ownedFragmentsCount = 0;
+
   }
   void RamFsFile::setActiveState(const bool state) {
     m_storable_params.m_isActive = state;
@@ -167,4 +166,19 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t requested_si
   bool RamFsFile::operator==(const RamFsFile& other) const {
     return !memcmp(&m_storable_params, &(other.m_storable_params),
                    sizeof(m_storable_params));
+  }
+
+  void RamFsFile::FreeHeldData() {
+    m_parentFs->IncrementFreeSize(m_storable_params.m_fileSize);
+    FreeOwnedFragments(); 
+  }    
+
+  RamFs_Status RamFsFile::Delete() {
+
+    FreeHeldData();
+    m_parentFs->m_storable_params.m_FileCount--;
+    m_parentFs->StoreFileInRam(this); 
+    initialize();
+
+    return RamFs_Status::SUCCESS;
   }

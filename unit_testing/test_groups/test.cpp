@@ -461,31 +461,6 @@ TEST_GROUP(TestFileWriteRead){
 
   }
 
-  void Helper_FillByteArray(uint8_t* arr, size_t size){
-    int j;
-    for (int i = 0; i < size; i++) {
-      arr[i] = j++;
-      j = (j > 255) ? 0 : j;
-    }
-  }
-
-  void Helper_WriteArrayToFileAndRead(RamFs& Fs, RamFsFile*& pFile,
-                                      uint8_t*& WriteArr, uint8_t*& ReadArr,
-                                      size_t size, RamFs_Status& WriteStatus,
-                                      RamFs_Status& ReadStatus,
-                                      size_t& FreeSizeAfterWriting,
-                                      size_t& FileSizeAfterWriting) {
-    WriteArr = new uint8_t[size];
-    ReadArr = new uint8_t[size];
-    Helper_FillByteArray(WriteArr,size);
-    Fs.CreateFile("file.txt", pFile, 100);
-
-    WriteStatus = pFile->Write(WriteArr, size, 110);
-    FreeSizeAfterWriting = Fs.GetFreeSize();
-    FileSizeAfterWriting = pFile->GetSize();
-    ReadStatus = pFile->Read(ReadArr, pFile->GetSize(), 0);
-  }
-
   TEST(TestFileWriteRead, Write1ByteLessThanFillingFs) {
     RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
@@ -676,24 +651,70 @@ TEST_GROUP(TestFileWriteRead){
     // shows that read data wasnt written to beyond byte 3 (5-2).
     CHECK(memcmp(ReadData+should_match_size,WriteData+should_match_size+read_pos1,should_not_match_size)); 
   }
-    //test basic delete (more free size, decreased file count, file cannot be found)
-    //test delete allows for 11th file, and that it can be found, wrriten to and read after instantiating new file system.
-    //test fragmentation by creating small file, large file, small file. Then deleting the small ones, and having a new file take those frags 
-    //(one must use up all of the fs to create a scenario where it wouldnt work without fragmenation)
-    //test too fragmented file (same as above but two large files)
 
-    //test too fragmented files (>3)
-    //ignore test with fragmented files (needs delete), this includes checking status
-    //ignore test with defragmentation (needs delete),this includes checking status
+TEST_GROUP(TestDelete){
+  void setup(){
+    defaultSetup();
+  }
+  void teardown(){
+    defaultTeardown();
+  }
+};
 
-    //test appending to 1 byte less than full, full, over full (like we did for normal writing)
+TEST(TestDelete, BasicDelete) {
+  RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+  MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+  MyFileSystem.CreateFile(fname2, pMyFile2, time1);
 
-    //test deletion, appending, etc.. (deletion is essentially what is done in the beginning of write)
-    //test all return messages
-    //test something that would onnly be possible with defragmentation
+  write_size1 = 10;
+  write_size2 = 20;
 
-    /* test that one can write to a file (TIMESTAMP,and variants) test that one can read from a file (and variants) test that one can get fs free size test that one can get file size test that one can get file timestamp test that one can get filename only when all of the above are done, do we think about appending,deleting and variants that require multiple fragments add feature to only store parts of the filesystem ->Add non default size test when structures are stable add doxygen comments*/
+  pMyFile1->Write(WriteData, write_size1, time2);
+  pMyFile2->Write(WriteData, write_size2, time3);
 
-    //change addressed to user defined type so user can control adress size (in general refactor int and size types)
+  int file_nr_before = MyFileSystem.GetFileCount();
+  size_t free_size_before = MyFileSystem.GetFreeSize();
 
-    //leave defragmentation for a later update (will need to shift data around).
+  pMyFile1->Delete();
+
+  int file_nr_after = MyFileSystem.GetFileCount();
+  size_t free_size_after = MyFileSystem.GetFreeSize();
+
+  find_status1 = MyFileSystem.FindFile(fname1,pMyFile3);
+
+  CHECK_EQUAL(file_nr_before - file_nr_after, 1);
+  CHECK_EQUAL(free_size_after - free_size_before, write_size1);
+  CHECK(find_status1 == RamFs_Status::FILE_NOT_FOUND);
+}
+  // test basic delete (more free size, decreased file count, file cannot be
+  // found) test delete allows for 11th file, and that it can be found, wrriten
+  // to and read after instantiating new file system. test fragmentation by
+  // creating small file, large file, small file. Then deleting the small ones,
+  // and having a new file take those frags (one must use up all of the fs to
+  //create a scenario where it wouldnt work without fragmenation) test too
+  // fragmented file (same as above but two large files)
+
+  // test too fragmented files (>3)
+  // ignore test with fragmented files (needs delete), this includes checking
+  // status ignore test with defragmentation (needs delete),this includes
+  // checking status
+
+  // test appending to 1 byte less than full, full, over full (like we did for
+  // normal writing)
+
+  // test deletion, appending, etc.. (deletion is essentially what is done in
+  // the beginning of write) test all return messages test something that would
+  // onnly be possible with defragmentation
+
+  /* test that one can write to a file (TIMESTAMP,and variants) test that one
+   * can read from a file (and variants) test that one can get fs free size test
+   * that one can get file size test that one can get file timestamp test that
+   * one can get filename only when all of the above are done, do we think about
+   * appending,deleting and variants that require multiple fragments add feature
+   * to only store parts of the filesystem ->Add non default size test when
+   * structures are stable add doxygen comments*/
+
+  // change addressed to user defined type so user can control adress size (in
+  // general refactor int and size types)
+
+  // leave defragmentation for a later update (will need to shift data around).

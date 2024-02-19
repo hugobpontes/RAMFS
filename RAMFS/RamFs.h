@@ -36,6 +36,7 @@ class RamFsFile {
   Timestamp GetModificationTimestamp() const;
   RamFs_Status Write (const void* const pData, const size_t requested_size, const Timestamp modif_time);
   RamFs_Status Read(void* const pData, const size_t requested_size, const size_t start_pos) const;
+  RamFs_Status Delete();
   size_t GetSize() const;
   bool operator==(const RamFsFile& other) const;
   private : 
@@ -49,6 +50,7 @@ class RamFsFile {
   RamFs_Status TakeHoldOfRequiredFragments(const size_t size);
   void ReadFromFileFrags(void* const pData, const int starting_frag,
                     const int starting_frag_pos, const size_t requested_size) const;
+  void FreeHeldData();
 
       RamFs* m_parentFs;
   struct StorableFile{
