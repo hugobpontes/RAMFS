@@ -686,35 +686,29 @@ TEST(TestDelete, BasicDelete) {
   CHECK_EQUAL(free_size_after - free_size_before, write_size1);
   CHECK(find_status1 == RamFs_Status::FILE_NOT_FOUND);
 }
-  // test basic delete (more free size, decreased file count, file cannot be
-  // found) test delete allows for 11th file, and that it can be found, wrriten
-  // to and read after instantiating new file system. test fragmentation by
-  // creating small file, large file, small file. Then deleting the small ones,
+  //->test delete allows for 11th file, and that it can be found, wrriten
+  // to and read after instantiating new file system. 
+  
+  //->test fragmentation by
+  //->creating small file, large file, small file. Then deleting the small ones,
   // and having a new file take those frags (one must use up all of the fs to
-  //create a scenario where it wouldnt work without fragmenation) test too
-  // fragmented file (same as above but two large files)
+  //create a scenario where it wouldnt work without fragmenation). Write to this fragmented file then instantiate new object and then read from it
+  
+  //->test too fragmented file (same as above but two large files leading to more fragments than the max(Also Check status))
 
-  // test too fragmented files (>3)
-  // ignore test with fragmented files (needs delete), this includes checking
-  // status ignore test with defragmentation (needs delete),this includes
-  // checking status
-
-  // test appending to 1 byte less than full, full, over full (like we did for
+  //->test appending to 1 byte less than full, full, over full (like we did for
   // normal writing)
 
-  // test deletion, appending, etc.. (deletion is essentially what is done in
-  // the beginning of write) test all return messages test something that would
-  // onnly be possible with defragmentation
+  //->same tests for write as for append pretty much
+  //->test no more frag slots left in file for append
+  //->repeat fragmentation tests but fragmente with append instead of delete
 
-  /* test that one can write to a file (TIMESTAMP,and variants) test that one
-   * can read from a file (and variants) test that one can get fs free size test
-   * that one can get file size test that one can get file timestamp test that
-   * one can get filename only when all of the above are done, do we think about
-   * appending,deleting and variants that require multiple fragments add feature
-   * to only store parts of the filesystem ->Add non default size test when
-   * structures are stable add doxygen comments*/
+  //->test filename get
 
-  // change addressed to user defined type so user can control adress size (in
-  // general refactor int and size types)
+  //->general refactoring: clean up ugly code, remove repetitions, try to create helper functions...
+  //->improvements: hash table filename lookup, partial fs store, check ther to do's
+  //->create flexible types, check type coherence (for addresses, for indexes, etc...)
+  //->check const correctness of everything
+  //->add doxygen comments 
 
   // leave defragmentation for a later update (will need to shift data around).
