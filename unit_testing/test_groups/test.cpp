@@ -718,15 +718,47 @@ TEST(TestDelete, 11thFile) {
   CHECK(read_status1 == RamFs_Status::SUCCESS);
   MEMCMP_EQUAL(WriteData, ReadData, write_size1);
 }
-  //->test delete allows for 11th file, and that it can be found, wrriten
-  // to and read after instantiating new file system. 
-  
-  //->test fragmentation by
+
+TEST(TestDelete, FragmentationByDelete) {
+  RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+  /*This tests if fragmentation works after a fragmentation is caused by a delete
+  To that end, a 20 byte file needs to be written in a file system that doesnt have 20 continous free bytes
+  To achieve that we create a 5 byte file and then a file with size only 20 bytes less the fs storage size
+  when we delete the original file we are left with two free spaces: a 5 byte block that used to
+  belong to the first file, and a 15 byte free block after the large file.
+  We we try to write 20 bytes now, that file will have to be fragmented*/
+
+  write_size1 = 5;
+  write_size3 = 20;
+  write_size2 = MyFileSystem.GetFreeSize()-write_size3;
+
+  MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+  MyFileSystem.CreateFile(fname2, pMyFile2, time1);
+  MyFileSystem.CreateFile(fname3, pMyFile3, time1);
+
+  write_status1 = pMyFile1->Write(WriteData, write_size1, time2);
+  write_status2 = pMyFile2->Write(WriteData+100, write_size2, time2);
+  delete_status1 = pMyFile1->Delete();
+  write_status3 = pMyFile3->Write(WriteData+200, write_size3, time3);
+  read_status1 = pMyFile3->Read(ReadData, write_size3,0);
+
+  CHECK(write_status3 == RamFs_Status::SUCCESS);
+  MEMCMP_EQUAL(WriteData+200, ReadData, write_size3);
+  CHECK_EQUAL(MyFileSystem.GetFreeSize(),0);
+  CHECK_EQUAL(pMyFile3->GetSize(), write_size3);
+
+  //actually test with still one or two bytes left
+  //>>>>>>>>>>>>LOAD FS!!
+
+}
+    //->test fragmentation by
   //->creating small file, large file, small file. Then deleting the small ones,
   // and having a new file take those frags (one must use up all of the fs to
   //create a scenario where it wouldnt work without fragmenation). Write to this fragmented file then instantiate new object and then read from it
   
   //->test too fragmented file (same as above but two large files leading to more fragments than the max(Also Check status))
+  //->test no more fragments even though files have the appropriate amount of frags
 
   //->test appending to 1 byte less than full, full, over full (like we did for
   // normal writing)

@@ -178,7 +178,7 @@ void RamFs::GetBlockAt(const RamFsFragment * pClosestFrag, const size_t requeste
   size_t end_of_closest_frag;
 
   if(pClosestFrag == nullptr){
-    end_of_closest_frag = RamFs::GetStorableParamsSize();
+    end_of_closest_frag = RamFs::GetStorableParamsSize()-1; //end of unusable ram area (where params are stored)
   } else {
     end_of_closest_frag = pClosestFrag->GetEnd();   
   }
@@ -242,6 +242,11 @@ void RamFs::FindFreeMemoryArea(const size_t requested_size, size_t& start, size_
       if (RamFsFragment::BlockSize(tentative_block_start,tentative_block_end) > RamFsFragment::BlockSize(best_block_start,best_block_end)) {
         best_block_start = tentative_block_start;
         best_block_end = tentative_block_end;
+      }
+
+      if (pClosestFrag == nullptr){
+        /*closest pointer is already start of ram so there is no more space to find*/
+        break;
       }
     }
   } 
