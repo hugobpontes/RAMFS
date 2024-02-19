@@ -48,7 +48,7 @@ RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
   return RamFs_Status::SUCCESS;
 }
 
-RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
+RamFs_Status RamFsFile::Write(const void* const pData, const size_t requested_size,
                                 const Timestamp modif_time) {
     
     size_t already_written_size = 0;
@@ -56,14 +56,14 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
     if (pData == nullptr){
       return RamFs_Status::NULL_POINTER;
     }
-    if (size > m_parentFs->GetFreeSize()){
+    if (requested_size > m_parentFs->GetFreeSize()) {
       return RamFs_Status::INSUFFICIENT_STORAGE;
     }
 
     FreeOwnedFragments();
     m_parentFs->IncrementFreeSize(m_storable_params.m_fileSize);
 
-    RamFs_Status take_status = TakeHoldOfRequiredFragments(size);
+    RamFs_Status take_status = TakeHoldOfRequiredFragments(requested_size);
 
     if (take_status == RamFs_Status::SUCCESS){
       for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
@@ -82,27 +82,59 @@ RamFs_Status RamFsFile::Write(const void* const pData, const size_t size,
     return RamFs_Status::SUCCESS;  
   }
 
-  RamFs_Status RamFsFile::Read(void* const pData, const size_t size,
-                               const size_t start_pos) const {
+  void RamFsFile::ReadFromFileFrags(void* const pData,
+                                            const int starting_frag,
+                                            const int starting_frag_pos,
+                                            const size_t requested_size) const {
+    size_t size_yet_to_read_from_file;
+    size_t size_to_read_from_current_frag;
+    size_t already_read_size = 0;
+    size_t frag_read_pos = starting_frag_pos;
 
+    RamFsFragment* pCurrentFrag;
+
+    for (int i = starting_frag; i < m_storable_params.m_ownedFragmentsCount;i++) {
+      pCurrentFrag = m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]);
+
+      size_yet_to_read_from_file = requested_size - already_read_size;
+
+      if (size_yet_to_read_from_file > pCurrentFrag->GetSize() - frag_read_pos) {
+        size_to_read_from_current_frag = pCurrentFrag->GetSize() - frag_read_pos;
+      } else {
+        size_to_read_from_current_frag = size_yet_to_read_from_file;
+      }
+
+      m_parentFs->m_ramAccess.RamRead(static_cast<char* const>(pData) + already_read_size,size_to_read_from_current_frag,pCurrentFrag->GetStart() + starting_frag_pos);
+      already_read_size += size_to_read_from_current_frag;
+      frag_read_pos = 0;
+
+      if (already_read_size == requested_size){
+        break;
+      }
+    }
+  }
+
+  RamFs_Status RamFsFile::Read(void* const pData, const size_t requested_size,
+                               const size_t start_pos) const {
+    
     size_t already_read_size = 0;
 
     if (pData == nullptr) {
       return RamFs_Status::NULL_POINTER;
     }
-    // check that frags size is enough for read size
-    
-    for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
-      RamFsFragment* pFrag;
-      pFrag = m_parentFs->GetFragmentAt(
-          m_storable_params.m_ownedFragmentsIdxs[i]);
-      m_parentFs->m_ramAccess.RamRead(
-          static_cast<char* const>(pData) + already_read_size, pFrag->GetSize(),
-          pFrag->GetStart());
-      already_read_size += pFrag->GetSize();
-    }
+    if (start_pos >= m_storable_params.m_fileSize){
+      return RamFs_Status::READ_OUT_OF_BOUNDS;
+    }    
+
+    /*Needs to be improved to take fragmented files into account
+    this needs to be computed instead of just assigned*/
+    int starting_frag = 0;
+    int starting_frag_pos = start_pos;
+
+    ReadFromFileFrags(pData,starting_frag,starting_frag_pos,requested_size);
+
     return RamFs_Status::SUCCESS;
-  }
+}
 
   void RamFsFile::initializeCommon(const char* const& fname,
                                    const size_t fname_size,

@@ -23,6 +23,7 @@ enum class RamFs_Status {
   FILE_NOT_FOUND,
   NULL_POINTER,
   INSUFFICIENT_STORAGE,
+  READ_OUT_OF_BOUNDS,
 
 };
 
@@ -33,8 +34,8 @@ class RamFsFile {
   friend class RamFs;
   Timestamp GetCreationTimestamp() const;
   Timestamp GetModificationTimestamp() const;
-  RamFs_Status Write (const void* const pData, const size_t size, const Timestamp modif_time);
-  RamFs_Status Read(void* const pData, const size_t size, const size_t start_pos) const;
+  RamFs_Status Write (const void* const pData, const size_t requested_size, const Timestamp modif_time);
+  RamFs_Status Read(void* const pData, const size_t requested_size, const size_t start_pos) const;
   size_t GetSize() const;
   bool operator==(const RamFsFile& other) const;
   private : 
@@ -46,6 +47,8 @@ class RamFsFile {
   void setActiveState(const bool state);
   void FreeOwnedFragments();
   RamFs_Status TakeHoldOfRequiredFragments(const size_t size);
+  void ReadFromFileFrags(void* const pData, const int starting_frag,
+                    const int starting_frag_pos, const size_t requested_size) const;
 
       RamFs* m_parentFs;
   struct StorableFile{

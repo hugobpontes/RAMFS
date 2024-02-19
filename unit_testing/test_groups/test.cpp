@@ -48,7 +48,12 @@ size_t file_size_after_writing3;
 size_t write_size1;
 size_t write_size2;
 size_t write_size3;
-
+size_t read_size1;
+size_t read_size2;
+size_t read_size3;
+size_t read_pos1;
+size_t read_pos2;
+size_t read_pos3;
 
 uint8_t* WriteData;
 uint8_t* ReadData;
@@ -124,6 +129,12 @@ static void resetGlobalTestData() {
   write_size1 = 0;
   write_size2 = 0;
   write_size3 = 0;
+  read_size1 = 0;
+  read_size2 = 0;
+  read_size3 = 0;
+  read_pos1 = 0;
+  read_pos2 = 0;
+  read_pos3 = 0;
 }
 
 static void defaultSetup(){
@@ -575,10 +586,101 @@ TEST_GROUP(TestFileWriteRead){
     CHECK(read_status1 == RamFs_Status::NULL_POINTER);
 
   }
-    //test reading more than file size
-    //test reading 0 bytes
-    //test read null ptr
-    //test read with position over file size
+
+  TEST(TestFileWriteRead, ReadSize0) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    write_size1 = 3;
+    read_size1 = 0;
+
+    MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+
+    write_status1 = pMyFile1->Write(WriteData, write_size1, time2);
+    read_status1 = pMyFile1->Read(ReadData, read_size1, 0);
+
+    CHECK(read_status1 == RamFs_Status::SUCCESS);
+    CHECK(memcmp(ReadData,WriteData,write_size1)); //shows that read data wasnt written to.
+  }
+
+  TEST(TestFileWriteRead, ReadOverFileSize) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    write_size1 = 3;
+    read_size1 = 4;
+
+    size_t should_match_size = write_size1;
+    size_t should_not_match_size = read_size1-write_size1;
+
+    MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+
+    write_status1 = pMyFile1->Write(WriteData, write_size1, time2);
+    read_status1 = pMyFile1->Read(ReadData, read_size1, 0);
+
+    CHECK(read_status1 == RamFs_Status::SUCCESS);
+    // shows that read data was written to until byte 3.
+    CHECK(!memcmp(ReadData,WriteData,should_match_size));
+    // shows that read data wasnt written to beyond byte 3.
+    CHECK(memcmp(ReadData+should_match_size,WriteData+should_match_size,should_not_match_size));  
+  }
+
+  TEST(TestFileWriteRead, ReadStartingFromBeyondFile) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    write_size1 = 3;
+    read_pos1 = write_size1; //out of bounds read
+
+    MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+
+    write_status1 = pMyFile1->Write(WriteData, write_size1, time2);
+    read_status1 = pMyFile1->Read(ReadData, read_size1, read_pos1);
+
+    CHECK(read_status1 == RamFs_Status::READ_OUT_OF_BOUNDS);
+  }
+
+  TEST(TestFileWriteRead, ReadStartingFromMiddle) {   
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    write_size1 = 5;
+    read_size1 = 3;
+
+    read_pos1 = 2;
+
+    MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+
+    write_status1 = pMyFile1->Write(WriteData, write_size1, time2);
+    read_status1 = pMyFile1->Read(ReadData, read_size1,read_pos1);
+
+    CHECK(read_status1 == RamFs_Status::SUCCESS);
+    MEMCMP_EQUAL(WriteData+read_pos1,ReadData,read_size1);
+
+  }
+
+  TEST(TestFileWriteRead, ReadStartingFromMiddleAndOverFileSize) {
+    RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+    write_size1 = 5;
+    read_size1 = 7;
+    read_pos1 = 2;
+
+    size_t should_match_size = write_size1-read_pos1;
+    size_t should_not_match_size = read_size1 - (write_size1-read_pos1);
+
+    MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+
+    write_status1 = pMyFile1->Write(WriteData, write_size1, time2);
+    read_status1 = pMyFile1->Read(ReadData, read_size1, read_pos1);
+
+    CHECK(read_status1 == RamFs_Status::SUCCESS);
+    // shows that read data was written to until byte 3 (5-2), with data starting at start of written data+2.
+    CHECK(!memcmp(ReadData,WriteData+read_pos1,should_match_size));
+    // shows that read data wasnt written to beyond byte 3 (5-2).
+    CHECK(memcmp(ReadData+should_match_size,WriteData+should_match_size+read_pos1,should_not_match_size)); 
+  }
+    //test basic delete (more free size, decreased file count, file cannot be found)
+    //test delete allows for 11th file, and that it can be found, wrriten to and read after instantiating new file system.
+    //test fragmentation by creating small file, large file, small file. Then deleting the small ones, and having a new file take those frags 
+    //(one must use up all of the fs to create a scenario where it wouldnt work without fragmenation)
+    //test too fragmented file (same as above but two large files)
 
     //test too fragmented files (>3)
     //ignore test with fragmented files (needs delete), this includes checking status
@@ -593,3 +695,5 @@ TEST_GROUP(TestFileWriteRead){
     /* test that one can write to a file (TIMESTAMP,and variants) test that one can read from a file (and variants) test that one can get fs free size test that one can get file size test that one can get file timestamp test that one can get filename only when all of the above are done, do we think about appending,deleting and variants that require multiple fragments add feature to only store parts of the filesystem ->Add non default size test when structures are stable add doxygen comments*/
 
     //change addressed to user defined type so user can control adress size (in general refactor int and size types)
+
+    //leave defragmentation for a later update (will need to shift data around).
