@@ -782,12 +782,13 @@ TEST(TestDelete, FragmentationByDelete_UnfilledFsAndLoad) {
 
 }
 
-IGNORE_TEST(TestDelete, FragmentationByDelete_UnfilledFsAndLoad) {  
+TEST(TestDelete, FragmentationByDelete_TooFragmentedWrite) {  
   
   /*For this test we want to fragment the file system as such:
   |5B|XB|5B|XB|5B|XB|5B and then delete the 5B files and then try to create a 20B file.
-  Since this requires fragments, an error message should be returned when writing.
-  Additionally, the file should be reset. */
+  Since this requires more fragments (4) than a file can hold (3), an error message should be 
+  returned when writing.
+  Additionally, the file should be reset to its original state. */
 
   constexpr int kTotalFiles = 7;
 
@@ -811,7 +812,7 @@ IGNORE_TEST(TestDelete, FragmentationByDelete_UnfilledFsAndLoad) {
   for (int i = 0; i < kTotalFiles; i++) {
     find_status1 = MyFileSystem.FindFile(("name" + std::to_string(i)).data(), pMyFile1);
     CHECK(find_status1 == RamFs_Status::SUCCESS);
-    if (i%2){
+    if (i%2 == 0){
       pMyFile1->Delete();
     }
   }
@@ -819,15 +820,16 @@ IGNORE_TEST(TestDelete, FragmentationByDelete_UnfilledFsAndLoad) {
   creation_status2 = MyFileSystem.CreateFile(fname1, pMyFile2, time3);
   write_status1 = pMyFile2->Write(WriteData, 2, time5); //this is just to show later that file wasnt altered
   file_size1 = pMyFile2->GetSize();
-  free_size1 = MyFileSystem.GetFreeSize();
+  free_size2 = MyFileSystem.GetFreeSize();
   write_status2 = pMyFile2->Write(WriteData, write_size1, time6);
   file_size2 = pMyFile2->GetSize();
-  free_size2 = MyFileSystem.GetFreeSize();
+  free_size3 = MyFileSystem.GetFreeSize();
 
   CHECK(creation_status2 == RamFs_Status::SUCCESS); // check status
-  CHECK(write_status1 == RamFs_Status::FILE_TOO_FRAGMENTED);
+  CHECK(write_status1 == RamFs_Status::SUCCESS);
+  CHECK(write_status2 == RamFs_Status::FILE_TOO_FRAGMENTED);
   CHECK_EQUAL(file_size1,file_size2);
-  CHECK_EQUAL(free_size1, free_size2);
+  CHECK_EQUAL(free_size2, free_size3);
 }
   //->test too fragmented file (same as above but two large files leading to more fragments than the max(Also Check status))
 
@@ -837,7 +839,7 @@ IGNORE_TEST(TestDelete, FragmentationByDelete_UnfilledFsAndLoad) {
 //->same tests for write as for append pretty much
 //->test no more frag slots left in file for append
 //->test no more fragments slots available in fs even though files have the appropriate amount of
-//frags (will i need to fragment 10 files???? better wait for appending)
+//frags (will i need to fragment 10 files???? maybe i better wait for appending)
 //->repeat fragmentation tests but fragmente with append instead of delete
 
 //->test filename get

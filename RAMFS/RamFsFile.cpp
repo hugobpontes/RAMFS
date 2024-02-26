@@ -28,32 +28,52 @@ RamFs_Status RamFsFile::TakeHoldOfRequiredFragments(const size_t size) {
   
   size_t owned_memory_size = 0;
 
+  RamFs_Status take_status = RamFs_Status::SUCCESS;
+
   int new_frag_idx = k_InvalidFragIdx;
-  RamFsFragment* p_new_frag;
+  RamFsFragment* p_new_frag = nullptr;
+
+  StorableFile SavedFileParams;
+  RamFsFragment SavedFragments[k_MaxFragmentPerFile];
+
+  /*Save current file and associated frags state in case of failure*/
+  SavedFileParams = m_storable_params;
+  for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
+    SavedFragments[i] = *m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]);
+  }
 
   while (owned_memory_size < size) {
     if (m_storable_params.m_ownedFragmentsCount >= k_MaxFragmentPerFile) {
-      // this is actually just for append
-      //  set bad status
+      take_status = RamFs_Status::FILE_TOO_FRAGMENTED;
       break;
     }
 
     new_frag_idx = m_parentFs->AllocateNewFragment(size-owned_memory_size);
 
-    if (new_frag_idx == k_InvalidFragIdx || p_new_frag == nullptr) {
+    if (new_frag_idx == k_InvalidFragIdx) {
       // set bad status
       break;
     }
     m_storable_params.m_ownedFragmentsIdxs[m_storable_params.m_ownedFragmentsCount] = new_frag_idx;
     m_storable_params.m_ownedFragmentsCount++;
     p_new_frag = m_parentFs->GetFragmentAt(new_frag_idx);
-    owned_memory_size += p_new_frag->GetSize();
+    if (p_new_frag != nullptr){
+      owned_memory_size += p_new_frag->GetSize();
+    }
   }
 
-  m_storable_params.m_fileSize = owned_memory_size;
-  m_parentFs->IncrementFreeSize(-owned_memory_size);
+  if (take_status == RamFs_Status::SUCCESS){
+    m_storable_params.m_fileSize = owned_memory_size;
+    m_parentFs->IncrementFreeSize(-owned_memory_size);
+  } else {
+    m_storable_params = SavedFileParams;
+    for (int i = 0; i < m_storable_params.m_ownedFragmentsCount; i++) {
+      *(m_parentFs->GetFragmentAt(m_storable_params.m_ownedFragmentsIdxs[i]))= SavedFragments[i] ;
+    }
+    m_parentFs->IncrementFreeSize(-m_storable_params.m_fileSize);
+  }
 
-  return RamFs_Status::SUCCESS;
+  return take_status;
 }
 
 RamFs_Status RamFsFile::Write(const void* const pData, const size_t requested_size,
