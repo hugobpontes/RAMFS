@@ -752,6 +752,34 @@ TEST(TestDelete, FragmentationByDelete) {
 
 }
 
+TEST(TestDelete, FragmentationByDelete_StartReadInOtherFrag) {
+
+  /*This tests that starting to read a file after its first
+  fragment works*/
+
+
+  RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
+
+  write_size1 = 5;
+  write_size3 = 20;
+  write_size2 = MyFileSystem.GetFreeSize() - write_size3;
+
+  read_pos1 = 16;
+  read_size1 = 3;
+
+  MyFileSystem.CreateFile(fname1, pMyFile1, time1);
+  MyFileSystem.CreateFile(fname2, pMyFile2, time1);
+  MyFileSystem.CreateFile(fname3, pMyFile3, time1);
+
+  write_status1 = pMyFile1->Write(WriteData, write_size1, time2);
+  write_status2 = pMyFile2->Write(WriteData + 100, write_size2, time2);
+  delete_status1 = pMyFile1->Delete();
+  write_status3 = pMyFile3->Write(WriteData + 200, write_size3, time3);
+  read_status1 = pMyFile3->Read(ReadData, read_size1, read_pos1);
+
+  MEMCMP_EQUAL(WriteData + 200+read_pos1, ReadData, read_size1);
+}
+
 TEST(TestDelete, FragmentationByDelete_UnfilledFsAndLoad) {
   RamFs MyFileSystem(RamAccess::k_RamSize, RamFileEmulator);
 
@@ -825,7 +853,7 @@ TEST(TestDelete, FragmentationByDelete_TooFragmentedWrite) {
   file_size2 = pMyFile2->GetSize();
   free_size3 = MyFileSystem.GetFreeSize();
 
-  CHECK(creation_status2 == RamFs_Status::SUCCESS); // check status
+  CHECK(creation_status2 == RamFs_Status::SUCCESS);
   CHECK(write_status1 == RamFs_Status::SUCCESS);
   CHECK(write_status2 == RamFs_Status::FILE_TOO_FRAGMENTED);
   CHECK_EQUAL(file_size1,file_size2);

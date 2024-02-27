@@ -30,6 +30,7 @@ enum class RamFs_Status {
 };
 
 class RamFs;
+class RamFsFragment;
 
 class RamFsFile {
  public:
@@ -41,9 +42,19 @@ class RamFsFile {
   RamFs_Status Delete();
   size_t GetSize() const;
   bool operator==(const RamFsFile& other) const;
-  private : 
+private : 
   RamFsFile() = default;
-  ~RamFsFile() = default; 
+  ~RamFsFile() = default;
+  struct StorableFile {
+    Filename m_filename;
+    size_t m_fileSize;
+    Timestamp m_creationTimestamp;
+    Timestamp m_modifTimestamp;
+    bool m_isActive = false;
+    int m_ownedFragmentsIdxs[k_MaxFragmentPerFile] = {0};
+    int m_ownedFragmentsCount;
+  } m_storable_params;
+  RamFs* m_parentFs;
   void initializeCommon(const char* const& fname, const size_t fname_size,Timestamp creation_time);
   void initialize(const char* const& fname, const size_t fname_size,const Timestamp creation_time);
   void initialize();
@@ -53,19 +64,12 @@ class RamFsFile {
   void ReadFromFileFrags(void* const pData, const int starting_frag,
                     const int starting_frag_pos, const size_t requested_size) const;
   void FreeHeldData();
-  int ComputeRequiredFragments(const size_t size) const;
-
-  RamFs* m_parentFs;
-  struct StorableFile{
-    Filename m_filename;
-    size_t m_fileSize;
-    Timestamp m_creationTimestamp;
-    Timestamp m_modifTimestamp;
-    bool m_isActive = false;
-    int m_ownedFragmentsIdxs[k_MaxFragmentPerFile] = {0};
-    int m_ownedFragmentsCount;
-    char dummy;
-  } m_storable_params;
+  void SaveFileState(StorableFile& TempFileParams,
+                                  RamFsFragment* pTempFragments) const;
+  void LoadFileState(const StorableFile& pTempFileParams,
+                     const RamFsFragment* TempFragments);
+  void WriteIntoHeldFragments(const void* const pData);
+  void FindReadStart(const size_t start_pos, int& starting_frag, int& starting_frag_pos) const;
 };
 
 class RamFsFragment{
